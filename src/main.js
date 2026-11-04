@@ -1,5 +1,5 @@
 import "./style.css";
-import { ymd, parseYmd, sessionsOn, getSession, saveSession, deleteSession, markAttendance, unmarkAttendance, recentOccurrences, getTimeline, stats, monthStats, listStudents, getStudent, saveStudent, deleteStudent, getOrg, getOrgs, getMe, isAdmin, canEditSession, getMembers, getInvites, staffName, inviteMember, revokeInvite, setRole, removeMember, convertToBusiness, takesClasses, getHours, saveSettings, getLeaves, onLeave, addLeave, deleteLeave, timesheet, saveProfile, listBatches, getBatch, batchStudentIds, studentBatches, saveBatch, deleteBatch, listGuardians, getGuardian, guardianStudentIds, studentGuardians, saveGuardian, deleteGuardian, studentHistory, markAllAttendance, studentLabel, todayOccurrences, invoiceTotals, listInvoices, getInvoice, billableLines, createInvoice, addPayment, deletePayment, voidInvoice, saveBilling, money, studentInvoices, staffReport, studentReport, revenueReport, listResources, studentResources, uploadResource, updateResource, deleteResource, resourceUrls, resourceLink, RES_ACCEPT, loadAll, clearAll, getProfile } from "./store.js";
+import { ymd, parseYmd, sessionsOn, getSession, saveSession, deleteSession, markAttendance, unmarkAttendance, recentOccurrences, getTimeline, stats, monthStats, listStudents, getStudent, saveStudent, deleteStudent, getOrg, getOrgs, getMe, isAdmin, canEditSession, getMembers, getInvites, staffName, inviteMember, revokeInvite, setRole, removeMember, convertToBusiness, takesClasses, getHours, saveSettings, getLeaves, onLeave, addLeave, deleteLeave, timesheet, saveProfile, listBatches, getBatch, batchStudentIds, studentBatches, saveBatch, deleteBatch, listGuardians, getGuardian, guardianStudentIds, studentGuardians, saveGuardian, deleteGuardian, studentHistory, markAllAttendance, studentLabel, todayOccurrences, invoiceTotals, listInvoices, getInvoice, billableLines, createInvoice, addPayment, deletePayment, voidInvoice, saveBilling, money, studentInvoices, staffReport, studentReport, revenueReport, listResources, studentResources, uploadResource, updateResource, deleteResource, resourceUrls, resourceLink, RES_ACCEPT, seedScales, listScales, getScale, saveScale, deleteScale, listAssessments, getAssessment, saveAssessment, deleteAssessment, canEditAssessment, studentGrades, listTracks, getTrack, saveTrack, deleteTrack, recordProgress, deleteEntry, canUndoSkill, trackStatus, studentSkills, loadAll, clearAll, getProfile } from "./store.js";
 import * as auth from "./auth.js";
 
 const $ = (id) => document.getElementById(id);
@@ -308,10 +308,9 @@ occDlg.addEventListener("click", (e) => { if (e.target === occDlg) occDlg.close(
 
 // ---------- navigation ----------
 const SECTIONS = ["home", "cal", "people", "invoices", "resources", "gradebook", "chat", "reports", "profile"];
-const REAL = { cal: "calView", home: "homeView", people: "peopleView", profile: "profileView", invoices: "invoicesView", reports: "reportsView", resources: "resourcesView" };
+const REAL = { cal: "calView", home: "homeView", people: "peopleView", profile: "profileView", invoices: "invoicesView", reports: "reportsView", resources: "resourcesView", gradebook: "gradebookView" };
 const TITLES = { home: "Home", cal: "Calendar", people: "People", invoices: "Invoices", resources: "Resources", gradebook: "Gradebook", chat: "Chat", reports: "Reports", profile: "Profile" };
 const SOON = {
-  gradebook: ["Gradebook", "Grade your students and track their progress over time."],
   chat: ["Chat", "Message students and parents."],
 };
 function show(which) {
@@ -327,6 +326,7 @@ function show(which) {
   if (which === "invoices") renderInvoices();
   if (which === "reports") renderReports();
   if (which === "resources") renderResources();
+  if (which === "gradebook") renderGradebook();
 }
 document.querySelectorAll(".side [data-go]").forEach((b) => (b.onclick = () => { if (b.dataset.go === "profile") profileId = null; show(b.dataset.go); }));
 
@@ -425,7 +425,7 @@ function renderStudentPage() {
     <h2 class="sect">Guardians <button class="undo" id="spAddGuardian">Add guardian</button></h2>
     ${gs.length ? `<div class="card">${gs.map((g) => `<div class="row"><div>${esc(g.name)}${g.relationship ? ` (${esc(g.relationship)})` : ""}<br><span>${[g.email, g.phone].filter(Boolean).map(esc).join(" · ") || "No contact details"}</span></div></div>`).join("")}</div>` : '<p class="hint">No guardians linked yet.</p>'}
     <h2 class="sect">Batches</h2>${bs.length ? bs.map((b) => `<span class="pill2">${esc(b.name)}</span>`).join("") : '<p class="hint">Not in any batch.</p>'}
-    ${invSection(s)}${resSection(s)}<h2 class="sect">Upcoming sessions</h2>${upcoming.length ? `<div class="card">${upcoming.slice(0, 5).map((r) => `<div class="row"><div>${esc(r.title)}<br><span>${fmtD(r.date)} · ${fmtT(r.start)} - ${fmtT(r.end)}${staffTxt(r)}</span></div></div>`).join("")}</div>` : '<p class="hint">Nothing scheduled in the next four weeks.</p>'}
+    ${invSection(s)}${resSection(s)}${gbSection(s)}<h2 class="sect">Upcoming sessions</h2>${upcoming.length ? `<div class="card">${upcoming.slice(0, 5).map((r) => `<div class="row"><div>${esc(r.title)}<br><span>${fmtD(r.date)} · ${fmtT(r.start)} - ${fmtT(r.end)}${staffTxt(r)}</span></div></div>`).join("")}</div>` : '<p class="hint">Nothing scheduled in the next four weeks.</p>'}
     <h2 class="sect">Attendance history</h2>${past.length ? `<div class="tblwrap"><table class="tbl"><thead><tr><th>Date</th><th>Time</th><th>Class</th>${biz ? "<th>Staff</th>" : ""}<th>Attendance</th></tr></thead><tbody>${past.slice(0, 100).map((r) => `<tr style="cursor:default"><td>${fmtD(r.date)}</td><td>${fmtT(r.start)} - ${fmtT(r.end)}</td><td>${esc(r.title)}</td>${biz ? `<td>${esc(staffName(r.staffId))}</td>` : ""}<td><span class="pill ${r.marked ? "active" : "inactive"}">${r.marked ? "Marked" : "Not marked"}</span></td></tr>`).join("")}</tbody></table></div>` : '<p class="hint">No past sessions yet.</p>'}`;
 }
 $("studentPage").addEventListener("click", (e) => {
@@ -958,6 +958,219 @@ resPane.addEventListener("drop", (e) => {
   if (!e.dataTransfer?.files?.length) return;
   $("resFile").files = e.dataTransfer.files;
   openUpload(null, true);
+});
+
+// ---------- gradebook ----------
+let gbTab = "grades";
+const studentNameOf = (id) => getStudent(id)?.name ?? "Former student";
+const pbar = (i, n) => `<span class="pbar" title="Level ${i + 1} of ${n}"><i style="width:${Math.round((100 * (i + 1)) / n)}%"></i></span>`;
+const lines = (txt) => [...new Set(txt.split("\n").map((l) => l.trim().slice(0, 40)).filter(Boolean))];
+
+const drawGradebook = () => ({ grades: renderGradesTab, scales: renderScalesTab, skills: renderSkillsTab })[gbTab]();
+function renderGradebook() {
+  document.querySelectorAll("[data-gb]").forEach((b) => b.classList.toggle("on", b.dataset.gb === gbTab));
+  $("gbGrades").hidden = gbTab !== "grades"; $("gbScales").hidden = gbTab !== "scales"; $("gbSkills").hidden = gbTab !== "skills";
+  drawGradebook();
+  if (isAdmin() && !listScales().length) seedScales().then(drawGradebook).catch((err) => alert(err.message)); // first visit: add common scales
+}
+document.querySelectorAll("[data-gb]").forEach((b) => (b.onclick = () => { gbTab = b.dataset.gb; renderGradebook(); }));
+$("gbSearch").oninput = () => renderGradesTab();
+$("gbStatus").onchange = () => renderGradesTab();
+
+// grades list
+function renderGradesTab() {
+  const q = $("gbSearch").value.trim().toLowerCase(), st = $("gbStatus").value, biz = getOrg().type === "business", all = listAssessments();
+  const rows = all.filter((a) => (st === "all" || a.status === st) && `${a.subject} ${a.description || ""}`.toLowerCase().includes(q));
+  $("gbTable").innerHTML = rows.length
+    ? `<table class="tbl"><thead><tr><th>Subject</th><th>Description</th><th>Date</th><th>Graded</th><th>Average</th><th>Status</th>${biz ? "<th>Staff</th>" : ""}<th>Published</th></tr></thead><tbody>${rows.map((a) =>
+        `<tr data-id="${a.id}" tabindex="0"><td>${esc(a.subject)}</td><td>${esc(a.description || "")}</td><td>${dShort(a.assessed_on)}</td><td>${a.count}</td><td>${a.avg == null ? "–" : a.avg + "%"}</td><td><span class="pill ${a.status === "published" ? "active" : "inactive"}">${a.status === "published" ? "Published" : "Draft"}</span>${a.verified_by ? ' <span class="pill2" title="Verified by an admin">&#10003; Verified</span>' : ""}</td>${biz ? `<td>${esc(staffName(a.staff_id))}</td>` : ""}<td>${a.published_on ? dShort(a.published_on) : "–"}</td></tr>`).join("")}</tbody></table>`
+    : `<p class="empty">${all.length ? "No grades match." : "No grades yet. Click Add grades to record marks or levels for your students."}</p>`;
+}
+const openRowFn = (fn) => (e) => { if (e.type === "keydown" && e.key !== "Enter") return; const r = e.target.closest("tr[data-id]"); if (r) fn(r.dataset.id); };
+
+// the grading sheet
+const grDlg = $("gradeDialog"), grForm = $("gradeForm");
+function gradeRows(scaleId, existing = []) {
+  const sc = getScale(scaleId), by = new Map(existing.map((e) => [e.student_id, e]));
+  $("gRows").innerHTML = !sc ? '<p class="hint">Choose a scale to start grading.</p>' : (listStudents().filter((x) => x.status === "active" || by.has(x.id)).map((x) => {
+    const e = by.get(x.id);
+    const input = sc.kind === "numeric"
+      ? `<input type="number" min="0" max="${Number(sc.max_score)}" step="0.01" data-g="mark" value="${e?.score ?? ""}" placeholder="out of ${Number(sc.max_score)}" aria-label="Marks for ${esc(x.name)}">`
+      : `<select data-g="mark" aria-label="Level for ${esc(x.name)}"><option value="">–</option>${sc.levels.map((l) => `<option${e?.level === l ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+    return `<div class="grow" data-sid="${x.id}"><span class="gname">${esc(x.name)}</span>${input}<input data-g="comment" maxlength="300" placeholder="Comment" value="${esc(e?.comment || "")}" aria-label="Comment for ${esc(x.name)}"></div>`;
+  }).join("") || '<p class="hint">Add some students first.</p>');
+  applyGradeFilter();
+}
+function applyGradeFilter() {
+  const q = $("gFilter").value.trim().toLowerCase(), ids = $("gBatch").value ? batchStudentIds($("gBatch").value) : null;
+  $("gRows").querySelectorAll(".grow").forEach((r) => { r.hidden = (!!q && !r.textContent.toLowerCase().includes(q)) || (ids && !ids.includes(r.dataset.sid)); });
+}
+function collectGrades(sc) {
+  return [...$("gRows").querySelectorAll(".grow")].map((r) => {
+    const v = r.querySelector("[data-g=mark]").value;
+    return v === "" ? null : { studentId: r.dataset.sid, score: sc.kind === "numeric" ? Number(v) : null, level: sc.kind === "levels" ? v : null, comment: r.querySelector("[data-g=comment]").value.trim() };
+  }).filter(Boolean);
+}
+function openGrade(id) {
+  const a = id ? getAssessment(id) : null, can = !a || canEditAssessment(a), f = grForm.elements;
+  $("grTitle").textContent = a ? "Grades" : "Add grades";
+  grForm.reset(); $("gError").textContent = "";
+  const subjects = [...new Set([...listAssessments().map((x) => x.subject), ...listTracks().map((t) => t.name)])];
+  $("subjList").innerHTML = subjects.map((x) => `<option value="${esc(x)}">`).join("");
+  f.scale.innerHTML = '<option value="">Choose a scale</option>' + listScales().map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("");
+  $("gBatch").innerHTML = '<option value="">All students</option>' + listBatches().map((b) => `<option value="${b.id}">${esc(b.name)}</option>`).join("");
+  f.id.value = a?.id ?? ""; f.subject.value = a?.subject ?? ""; f.description.value = a?.description ?? "";
+  f.date.value = a?.assessed_on ?? ymd(new Date()); f.scale.value = a?.scale_id ?? (listScales()[0]?.id || "");
+  $("gFilter").value = "";
+  gradeRows(f.scale.value, a?.entries ?? []);
+  $("gVerWrap").hidden = !isAdmin(); $("gVerified").checked = !!a?.verified_by;
+  grForm.querySelectorAll("input:not([type=hidden]),select,textarea").forEach((i) => { i.disabled = !can; });
+  $("gDraft").hidden = !can; $("gPublish").hidden = !can; $("gDelete").hidden = !(a && can);
+  if (!can) $("gError").textContent = "These grades were made by another staff member, so you can only view them.";
+  else if (!listScales().length) $("gError").textContent = isAdmin() ? "Create a grading scale first (Gradebook, then Scales)." : "Ask an owner or admin to create a grading scale first.";
+  grDlg.showModal();
+}
+$("addGradeBtn").onclick = () => openGrade();
+$("gbTable").addEventListener("click", openRowFn(openGrade));
+$("gbTable").addEventListener("keydown", openRowFn(openGrade));
+grForm.elements.scale.onchange = (e) => gradeRows(e.target.value, []);
+$("gBatch").onchange = applyGradeFilter;
+$("gFilter").oninput = applyGradeFilter;
+grForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = grForm.elements, publish = e.submitter?.dataset.pub === "1", sc = getScale(f.scale.value);
+  if (!sc) { $("gError").textContent = "Choose a scale."; return; }
+  try {
+    await saveAssessment({ id: f.id.value || undefined, subject: f.subject.value.trim(), description: f.description.value.trim(), scaleId: sc.id,
+      assessedOn: f.date.value, publish, verified: $("gVerified").checked, entries: collectGrades(sc) });
+  } catch (err) { $("gError").textContent = err.message; return; }
+  grDlg.close(); renderGradesTab(); if (studentOpenId) renderPeople();
+});
+$("gDelete").onclick = async () => {
+  if (!confirm("Delete these grades?")) return;
+  try { await deleteAssessment(grForm.elements.id.value); } catch (err) { $("gError").textContent = err.message; return; }
+  grDlg.close(); renderGradesTab(); if (studentOpenId) renderPeople();
+};
+$("gCancel").onclick = () => grDlg.close();
+grDlg.addEventListener("click", (e) => { if (e.target === grDlg) grDlg.close(); });
+
+// scales
+const scDlg = $("scaleDialog"), scForm = $("scaleForm");
+function renderScalesTab() {
+  const list = listScales();
+  $("addScaleBtn").hidden = !isAdmin();
+  $("scaleTable").innerHTML = list.length
+    ? `<table class="tbl"><thead><tr><th>Scale</th><th>Type</th><th>Details</th></tr></thead><tbody>${list.map((x) =>
+        `<tr data-id="${x.id}" tabindex="0"><td>${esc(x.name)}</td><td>${x.kind === "numeric" ? "Marks" : "Levels"}</td><td>${x.kind === "numeric" ? `Out of ${Number(x.max_score)}` : esc(x.levels.join(" › "))}</td></tr>`).join("")}</tbody></table>`
+    : '<p class="empty">No scales yet.</p>';
+}
+const syncScaleKind = () => { const num = scForm.elements.kind.value === "numeric"; $("scMaxWrap").hidden = !num; $("scLevWrap").hidden = num; };
+scForm.elements.kind.onchange = syncScaleKind;
+function openScale(id) {
+  const x = id ? getScale(id) : null, can = isAdmin(), f = scForm.elements;
+  $("scTitle").textContent = x ? (can ? "Edit scale" : "Scale") : "Add scale";
+  scForm.reset(); $("scError").textContent = "";
+  f.id.value = x?.id ?? ""; f.name.value = x?.name ?? ""; f.kind.value = x?.kind ?? "numeric";
+  f.max.value = x?.max_score ?? 100; f.levels.value = (x?.levels ?? []).join("\n");
+  syncScaleKind();
+  scForm.querySelectorAll("input:not([type=hidden]),select,textarea").forEach((i) => { i.disabled = !can; });
+  $("scSave").hidden = !can; $("scDelete").hidden = !(x && can);
+  scDlg.showModal();
+}
+$("addScaleBtn").onclick = () => openScale();
+$("scaleTable").addEventListener("click", openRowFn(openScale));
+$("scaleTable").addEventListener("keydown", openRowFn(openScale));
+scForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = scForm.elements;
+  try { await saveScale({ id: f.id.value || undefined, name: f.name.value.trim(), kind: f.kind.value, maxScore: f.max.value, levels: lines(f.levels.value) }); }
+  catch (err) { $("scError").textContent = err.message; return; }
+  scDlg.close(); renderScalesTab();
+});
+$("scDelete").onclick = async () => {
+  if (!confirm("Delete this scale?")) return;
+  try { await deleteScale(scForm.elements.id.value); } catch (err) { $("scError").textContent = err.message; return; }
+  scDlg.close(); renderScalesTab();
+};
+$("scCancel").onclick = () => scDlg.close();
+scDlg.addEventListener("click", (e) => { if (e.target === scDlg) scDlg.close(); });
+
+// skill tracks
+const tkDlg = $("trackDialog"), tkForm = $("trackForm"), pgDlg = $("progDialog"), pgForm = $("progForm");
+function renderSkillsTab() {
+  const list = listTracks();
+  $("addTrackBtn").hidden = !isAdmin();
+  $("trackList").innerHTML = list.length ? list.map((t) => {
+    const st = trackStatus(t.id);
+    return `<div class="card trk"><h2>${esc(t.name)}<span class="trkbtns">${isAdmin() ? `<button class="undo" data-tedit="${t.id}">Edit</button>` : ""}<button class="undo" data-trec="${t.id}">Record progress</button></span></h2>
+      <div class="pad">${t.description ? `<p class="hint">${esc(t.description)}</p>` : ""}<p>${t.levels.map((l, i) => `<span class="pill2">${i + 1}. ${esc(l)}</span>`).join("")}</p>
+      ${st.length ? `<div class="tblwrap"><table class="tbl"><thead><tr><th>Student</th><th>Current level</th><th>Progress</th><th>Updated</th></tr></thead><tbody>${st.map((r) =>
+        `<tr style="cursor:default"><td><button class="linkbtn" data-student="${r.studentId}">${esc(studentNameOf(r.studentId))}</button></td><td>${esc(r.level)}</td><td>${pbar(r.index, t.levels.length)}</td><td>${dShort(r.date)}</td></tr>`).join("")}</tbody></table></div>` : '<p class="hint">No progress recorded yet.</p>'}</div></div>`;
+  }).join("") : '<p class="empty">No skill tracks yet. A track follows one skill over time, like Reading from Beginning to Mastered.</p>';
+}
+function openTrack(id) {
+  const t = id ? getTrack(id) : null, f = tkForm.elements;
+  $("tkTitle").textContent = t ? "Edit skill track" : "Add skill track"; $("tkError").textContent = ""; tkForm.reset();
+  f.id.value = t?.id ?? ""; f.name.value = t?.name ?? ""; f.description.value = t?.description ?? ""; f.levels.value = (t?.levels ?? []).join("\n");
+  $("tkDelete").hidden = !t; tkDlg.showModal();
+}
+$("addTrackBtn").onclick = () => openTrack();
+tkForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = tkForm.elements;
+  try { await saveTrack({ id: f.id.value || undefined, name: f.name.value.trim(), description: f.description.value.trim(), levels: lines(f.levels.value) }); }
+  catch (err) { $("tkError").textContent = err.message; return; }
+  tkDlg.close(); renderSkillsTab(); if (studentOpenId) renderPeople();
+});
+$("tkDelete").onclick = async () => {
+  if (!confirm("Delete this skill track and all the progress recorded on it?")) return;
+  try { await deleteTrack(tkForm.elements.id.value); } catch (err) { $("tkError").textContent = err.message; return; }
+  tkDlg.close(); renderSkillsTab(); if (studentOpenId) renderPeople();
+};
+$("tkCancel").onclick = () => tkDlg.close();
+tkDlg.addEventListener("click", (e) => { if (e.target === tkDlg) tkDlg.close(); });
+
+function fillLevels() { const t = getTrack(pgForm.elements.track.value); pgForm.elements.level.innerHTML = (t?.levels ?? []).map((l) => `<option>${esc(l)}</option>`).join(""); }
+function openProgress(trackId, studentId) {
+  const f = pgForm.elements; pgForm.reset(); $("pgError").textContent = "";
+  f.track.innerHTML = listTracks().map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join("");
+  f.student.innerHTML = '<option value="">Choose a student</option>' + listStudents().filter((x) => x.status === "active").map((x) => `<option value="${x.id}">${esc(x.name)}</option>`).join("");
+  f.track.value = trackId; f.student.value = studentId || ""; f.date.value = ymd(new Date()); fillLevels();
+  pgDlg.showModal();
+}
+pgForm.elements.track.onchange = fillLevels;
+pgForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = pgForm.elements;
+  try { await recordProgress({ trackId: f.track.value, studentId: f.student.value, level: f.level.value, assessedOn: f.date.value, note: f.note.value.trim() }); }
+  catch (err) { $("pgError").textContent = err.message; return; }
+  pgDlg.close(); renderSkillsTab(); if (studentOpenId) renderPeople();
+});
+$("pgCancel").onclick = () => pgDlg.close();
+pgDlg.addEventListener("click", (e) => { if (e.target === pgDlg) pgDlg.close(); });
+$("trackList").addEventListener("click", (e) => {
+  const ed = e.target.closest("[data-tedit]"), rec = e.target.closest("[data-trec]"), stu = e.target.closest("[data-student]");
+  if (ed) openTrack(ed.dataset.tedit);
+  else if (rec) openProgress(rec.dataset.trec);
+  else if (stu) { studentOpenId = stu.dataset.student; peopleTab = "students"; show("people"); }
+});
+
+// shown on a student's page
+const gbSection = (st) => {
+  const gs = studentGrades(st.id), sk = studentSkills(st.id);
+  return `<h2 class="sect">Grades</h2>` + (gs.length
+    ? `<div class="tblwrap"><table class="tbl"><thead><tr><th>Date</th><th>Subject</th><th>Description</th><th>Grade</th><th>Status</th></tr></thead><tbody>${gs.slice(0, 15).map((g) =>
+        `<tr style="cursor:default"><td>${dShort(g.date)}</td><td>${esc(g.subject)}</td><td>${esc(g.description || "")}</td><td><b>${esc(g.text)}</b>${g.comment ? `<br><span class="hint">${esc(g.comment)}</span>` : ""}</td><td>${g.status === "published" ? "Published" : "Draft"}</td></tr>`).join("")}</tbody></table></div>`
+    : '<p class="hint">No grades yet.</p>')
+    + `<h2 class="sect">Skills ${listTracks().length ? '<button class="undo" id="spProgress">Record progress</button>' : ""}</h2>` + (sk.length
+    ? `<div class="card">${sk.map((x) => `<div class="row"><div>${esc(x.track.name)}<br><span>${esc(x.current.level)} · ${dShort(x.current.assessed_on)} · ${x.count} record${x.count > 1 ? "s" : ""}</span></div>${pbar(x.levelIndex, x.track.levels.length)}${canUndoSkill(x.current) ? `<button class="undo" data-undoskill="${x.current.id}">Undo</button>` : ""}</div>`).join("")}</div>`
+    : '<p class="hint">No skills tracked yet.</p>');
+};
+$("studentPage").addEventListener("click", async (e) => {
+  const u = e.target.closest("[data-undoskill]");
+  if (e.target.closest("#spProgress")) return openProgress(listTracks()[0].id, studentOpenId);
+  if (!u) return;
+  try { await deleteEntry(u.dataset.undoskill); renderPeople(); } catch (err) { alert(err.message); }
 });
 
 // ---------- workspace switcher, staff filter, header ----------

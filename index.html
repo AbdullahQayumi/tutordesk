@@ -21,8 +21,8 @@
   <button data-go="cal" title="Calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Calendar</span></button>
   <button data-go="people" title="People"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 010 7M18 14c2.2.7 3.5 2.7 3.5 6"/></svg><span>People</span></button>
   <button data-go="invoices" title="Invoices" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg><span>Invoices</span></button>
-  <button data-go="resources" title="Resources"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span>Resources</span></button>
-  <button data-go="gradebook" title="Gradebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5zM6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5"/></svg><span>Gradebook</span></button>
+  <button data-go="resources" title="Resources"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span>Files</span></button>
+  <button data-go="gradebook" title="Gradebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5zM6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5"/></svg><span>Grades</span></button>
   <button data-go="chat" title="Chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 01-11.5 7.2L4 20.5l1.3-4.5A8 8 0 1121 12z"/></svg><span>Chat</span></button>
   <button data-go="reports" title="Reports" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6"/></svg><span>Reports</span></button>
   <button data-go="profile" title="Profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span>Profile</span></button>
@@ -206,6 +206,31 @@
     </div>
   </section>
 
+  <section id="gradebookView" class="view">
+    <nav class="subnav" aria-label="Gradebook">
+      <h2>Gradebook</h2>
+      <button class="on" data-gb="grades">Grades</button>
+      <span class="sublabel">SETUP</span>
+      <button data-gb="scales">Scales</button>
+      <button data-gb="skills">Skill tracks</button>
+    </nav>
+    <div class="pane">
+      <div id="gbGrades">
+        <div class="phead"><div><h1>Grades</h1><p class="hint">Record marks or levels for a test or piece of work, then publish them. Admins can mark a set of grades as verified.</p></div><button class="add" id="addGradeBtn">Add grades</button></div>
+        <div class="toolbar"><input id="gbSearch" type="search" placeholder="Search subject or description" aria-label="Search grades"><select id="gbStatus" class="sel" aria-label="Filter by status"><option value="all">All</option><option value="draft">Drafts</option><option value="published">Published</option></select></div>
+        <div id="gbTable" class="tblwrap"></div>
+      </div>
+      <div id="gbScales" hidden>
+        <div class="phead"><div><h1>Scales</h1><p class="hint">How you grade: marks out of a total, or levels like A* to U. Only owners and admins can change scales.</p></div><button class="add" id="addScaleBtn">Add scale</button></div>
+        <div id="scaleTable" class="tblwrap" style="margin-top:16px"></div>
+      </div>
+      <div id="gbSkills" hidden>
+        <div class="phead"><div><h1>Skill tracks</h1><p class="hint">Follow a skill over time, like Reading from Beginning to Mastered, and record each student's progress.</p></div><button class="add" id="addTrackBtn">Add skill track</button></div>
+        <div id="trackList" class="trklist"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="soonView" class="view"><div class="soon"><h1 id="soonTitle"></h1><p id="soonText"></p></div></section>
 </div>
 
@@ -254,6 +279,60 @@
       <button type="button" id="stCancel">Cancel</button>
       <button type="submit" class="add">Save student</button>
     </div>
+  </form>
+</dialog>
+
+<dialog id="gradeDialog" aria-labelledby="grTitle">
+  <form id="gradeForm">
+    <h2 id="grTitle">Add grades</h2>
+    <input type="hidden" name="id">
+    <div class="two"><label>Subject <input name="subject" required maxlength="80" list="subjList" autocomplete="off"></label><label>Date <input name="date" type="date" required></label></div>
+    <datalist id="subjList"></datalist>
+    <label>Description <input name="description" maxlength="200" placeholder="e.g. Fractions test"></label>
+    <label>Scale <select name="scale" required></select></label>
+    <div class="two"><select id="gBatch" aria-label="Show a batch"></select><input id="gFilter" type="search" placeholder="Find a student" aria-label="Find a student"></div>
+    <div id="gRows" class="grows"></div>
+    <label id="gVerWrap" class="chk" hidden><input type="checkbox" id="gVerified"> Verified by an admin</label>
+    <p id="gError" class="err" role="alert"></p>
+    <div class="actions"><button type="button" id="gDelete" class="danger" hidden>Delete</button><button type="button" id="gCancel">Cancel</button><button type="submit" id="gDraft" data-pub="0">Save as draft</button><button type="submit" id="gPublish" data-pub="1" class="add">Publish</button></div>
+  </form>
+</dialog>
+
+<dialog id="scaleDialog" aria-labelledby="scTitle">
+  <form id="scaleForm">
+    <h2 id="scTitle">Add scale</h2>
+    <input type="hidden" name="id">
+    <label>Name <input name="name" required maxlength="60"></label>
+    <label>Type <select name="kind"><option value="numeric">Marks out of a total</option><option value="levels">Levels or letter grades</option></select></label>
+    <label id="scMaxWrap">Highest possible mark <input name="max" type="number" min="1" step="0.01" value="100"></label>
+    <label id="scLevWrap" hidden>Levels, best first (one per line) <textarea name="levels" rows="6" maxlength="400"></textarea></label>
+    <p id="scError" class="err" role="alert"></p>
+    <div class="actions"><button type="button" id="scDelete" class="danger" hidden>Delete</button><button type="button" id="scCancel">Close</button><button type="submit" id="scSave" class="add">Save</button></div>
+  </form>
+</dialog>
+
+<dialog id="trackDialog" aria-labelledby="tkTitle">
+  <form id="trackForm">
+    <h2 id="tkTitle">Add skill track</h2>
+    <input type="hidden" name="id">
+    <label>Name <input name="name" required maxlength="60" placeholder="e.g. Reading"></label>
+    <label>Description <input name="description" maxlength="200"></label>
+    <label>Levels, lowest first (one per line) <textarea name="levels" rows="6" maxlength="400" required placeholder="Beginning&#10;Developing&#10;Secure&#10;Mastered"></textarea></label>
+    <p id="tkError" class="err" role="alert"></p>
+    <div class="actions"><button type="button" id="tkDelete" class="danger" hidden>Delete</button><button type="button" id="tkCancel">Cancel</button><button type="submit" class="add">Save</button></div>
+  </form>
+</dialog>
+
+<dialog id="progDialog" aria-labelledby="pgTitle">
+  <form id="progForm">
+    <h2 id="pgTitle">Record progress</h2>
+    <label>Skill track <select name="track" required></select></label>
+    <label>Student <select name="student" required></select></label>
+    <label>Level reached <select name="level" required></select></label>
+    <label>Date <input name="date" type="date" required></label>
+    <label>Note (optional) <input name="note" maxlength="300"></label>
+    <p id="pgError" class="err" role="alert"></p>
+    <div class="actions"><button type="button" id="pgCancel">Cancel</button><button type="submit" class="add">Save</button></div>
   </form>
 </dialog>
 

@@ -410,7 +410,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--blue)}
 @media (max-width:760px){
   .stats.two{grid-template-columns:repeat(2,minmax(0,1fr))}
   .stats.two .stat{grid-column:span 1}
-  .side [data-go=gradebook],.side [data-go=chat]{display:none}
+  .side [data-go=chat]{display:none}
   #invNewForm input,#invNewForm select,#invNewForm textarea,#invSettingsForm select,#invSettingsForm textarea,.payform input,.payform select{font-size:16px}
 }
 
@@ -484,3 +484,29 @@ input[type=checkbox],input[type=radio]{accent-color:var(--blue)}
 /* page headers: let the text shrink so the action button stays on the right */
 .phead > div:first-child{flex:1 1 320px;min-width:0}
 .phead > .add,.phead > .btns{flex:0 0 auto}
+
+/* ---- Gradebook ---- */
+#gradebookView.on{flex-direction:row}
+#gradeDialog{width:min(720px,96vw)}
+#gradeForm,#scaleForm,#trackForm,#progForm{padding:20px;display:grid;gap:12px}
+#gradeForm label:not(.chk),#scaleForm label,#trackForm label,#progForm label{display:grid;gap:4px;font-size:11px;color:var(--mute)}
+#gradeForm input:not([type=checkbox]),#gradeForm select,#scaleForm input,#scaleForm select,#scaleForm textarea,#trackForm input,#trackForm textarea,#progForm input,#progForm select{font:inherit;font-size:13px;color:var(--ink);padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+#gradeForm .chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink)}
+#gradeForm .chk input{width:auto;padding:0;border:0}
+.grows{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:4px 12px}
+.grow{display:grid;grid-template-columns:minmax(110px,1.1fr) 120px minmax(0,1.6fr);gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.grow:last-child{border:0}
+.gname{font-size:13px;overflow-wrap:anywhere}
+.trklist{display:grid;gap:16px;margin-top:16px}
+.trk h2{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.trkbtns{display:flex;gap:14px;font-size:12px}
+.trk .pill2{margin:0 6px 6px 0}
+.pbar{display:inline-block;width:90px;height:8px;border-radius:4px;background:var(--bg2);overflow:hidden;vertical-align:middle}
+.pbar i{display:block;height:100%;background:var(--blue)}
+@media (max-width:760px){
+  #gradebookView.on{flex-direction:column}
+  .grow{grid-template-columns:minmax(0,1fr) 100px}
+  .grow .gname{grid-column:1/-1}
+  .grow input[data-g=comment]{grid-column:1/-1}
+  #gradeForm input:not([type=checkbox]),#gradeForm select,#scaleForm input,#scaleForm select,#scaleForm textarea,#trackForm input,#trackForm textarea,#progForm input,#progForm select{font-size:16px}
+}

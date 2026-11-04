@@ -18,6 +18,7 @@ let settings = {}, leaves = []; // settings: userId -> { workingHours, takesClas
 let batches = [], batchLinks = [], guardians = [], guardianLinks = [];
 let invoices = [], items = [], payments = []; // money: owners and admins only
 let resources = []; // uploaded files
+let scales = [], assessments = [], grades = [], tracks = [], entries = []; // gradebook
 
 const fail = (error) => { if (error) throw new Error(error.message); };
 const studentName = (id) => students.find((x) => x.id === id)?.name;
@@ -51,7 +52,7 @@ export async function loadAll(userId, preferredOrg) {
   org = orgs.find((o) => o.id === preferredOrg) || orgs[0];
   myRole = org.role;
   const q = (t, cols = "*") => supabase.from(t).select(cols).eq("org_id", org.id);
-  const [a, b, c, d, e, f, g, bt, bl, gd, gl, ss, iv, it, pm, rs] = await Promise.all([
+  const [a, b, c, d, e, f, g, bt, bl, gd, gl, ss, iv, it, pm, rs, sc, asm, ag, tk, te] = await Promise.all([
     q("sessions"),
     q("attendance", "session_id, student_id, occurrence, marked_at").order("marked_at", { ascending: false }),
     q("students"),
@@ -68,8 +69,13 @@ export async function loadAll(userId, preferredOrg) {
     isAdmin() ? q("invoice_items") : { data: [], error: null },
     isAdmin() ? q("payments") : { data: [], error: null },
     q("resources"),
+    q("grade_scales"),
+    q("assessments"),
+    q("assessment_grades"),
+    q("skill_tracks"),
+    q("skill_entries"),
   ]);
-  for (const r of [a, b, c, d, e, f, g, bt, bl, gd, gl, ss, iv, it, pm, rs]) fail(r.error);
+  for (const r of [a, b, c, d, e, f, g, bt, bl, gd, gl, ss, iv, it, pm, rs, sc, asm, ag, tk, te]) fail(r.error);
   members = d.data.map((m) => ({ userId: m.user_id, role: m.role, email: m.profiles?.email || "", phone: m.profiles?.phone || "",
     name: m.profiles?.full_name || m.profiles?.email || "Unnamed" }));
   invites = e.data;
@@ -82,12 +88,14 @@ export async function loadAll(userId, preferredOrg) {
   sessions = a.data.map((r) => ({ ...fromRow(r), studentIds: roster.get(r.id) || [] }));
   attendance = b.data;
   invoices = iv.data; items = it.data; payments = pm.data; resources = rs.data;
+  scales = sc.data; assessments = asm.data; grades = ag.data; tracks = tk.data; entries = te.data;
   reindexAtt();
 }
 export function clearAll() {
   sessions = []; attendance = []; attIdx = new Map(); students = []; org = null; orgs = []; members = []; invites = [];
   settings = {}; leaves = []; batches = []; batchLinks = []; guardians = []; guardianLinks = [];
   invoices = []; items = []; payments = []; resources = [];
+  scales = []; assessments = []; grades = []; tracks = []; entries = [];
 }
 
 export async function getProfile(userId) {
@@ -261,6 +269,7 @@ export async function deleteStudent(id) {
   batchLinks = batchLinks.filter((l) => l.student_id !== id);
   guardianLinks = guardianLinks.filter((l) => l.student_id !== id);
   resources.forEach((r) => { if (r.student_id === id) r.student_id = null; });
+  grades = grades.filter((g) => g.student_id !== id); entries = entries.filter((x) => x.student_id !== id);
 }
 
 // ---------- workspace / team ----------
@@ -654,3 +663,149 @@ export async function resourceLink(path, seconds = 120) {
   fail(error);
   return data.signedUrl;
 }
+
+// ---------- gradebook: scales, grades, skill tracks ----------
+const DEFAULT_SCALES = [
+  { name: "Percentage", kind: "numeric", max_score: 100 },
+  { name: "Letter grades (A* to U)", kind: "levels", levels: ["A*", "A", "B", "C", "D", "E", "U"] },
+  { name: "GCSE 9 to 1", kind: "levels", levels: ["9", "8", "7", "6", "5", "4", "3", "2", "1", "U"] },
+];
+export const listScales = () => [...scales].sort((a, b) => a.name.localeCompare(b.name));
+export const getScale = (id) => scales.find((x) => x.id === id);
+const seededFor = new Set();
+// First visit: owners and admins get three common scales to start from.
+export async function seedScales() {
+  if (!org || seededFor.has(org.id) || scales.length || !isAdmin()) return;
+  seededFor.add(org.id);
+  const { data, error } = await supabase.from("grade_scales").insert(DEFAULT_SCALES.map((x) => ({ ...x, org_id: org.id }))).select();
+  fail(error);
+  scales.push(...data);
+}
+export async function saveScale({ id, name, kind, maxScore, levels }) {
+  if (kind === "numeric" && !(Number(maxScore) > 0)) throw new Error("Enter the highest possible mark.");
+  if (kind === "levels" && levels.length < 2) throw new Error("Add at least two levels, one per line.");
+  if (id && getScale(id).kind !== kind && assessments.some((a) => a.scale_id === id)) throw new Error("This scale is already used by saved grades, so its type can't change.");
+  const row = { name, kind, max_score: kind === "numeric" ? Number(maxScore) : null, levels: kind === "levels" ? levels : null };
+  if (id) {
+    const { data, error } = await supabase.from("grade_scales").update(row).eq("id", id).select().single();
+    fail(error); Object.assign(getScale(id), data);
+  } else {
+    const { data, error } = await supabase.from("grade_scales").insert({ ...row, org_id: org.id }).select().single();
+    fail(error); scales.push(data);
+  }
+}
+export async function deleteScale(id) {
+  if (assessments.some((a) => a.scale_id === id)) throw new Error("This scale is used by saved grades, so it can't be deleted.");
+  const { error } = await supabase.from("grade_scales").delete().eq("id", id);
+  fail(error);
+  scales = scales.filter((x) => x.id !== id);
+}
+
+const pctOf = (sc, g) => (sc?.kind === "numeric" && g.score != null ? Math.round((100 * Number(g.score)) / Number(sc.max_score)) : null);
+export function gradeText(scaleId, g) {
+  const sc = getScale(scaleId);
+  if (!sc) return "–";
+  return sc.kind === "numeric" ? (g.score == null ? "–" : `${Number(g.score)}/${Number(sc.max_score)} (${pctOf(sc, g)}%)`) : g.level || "–";
+}
+export const canEditAssessment = (a) => isAdmin() || a.staff_id === myId;
+export function listAssessments() {
+  return assessments.map((a) => {
+    const sc = getScale(a.scale_id), gs = grades.filter((g) => g.assessment_id === a.id);
+    const pcts = gs.map((g) => pctOf(sc, g)).filter((x) => x != null);
+    return { ...a, count: gs.length, avg: pcts.length ? Math.round(pcts.reduce((t, x) => t + x, 0) / pcts.length) : null };
+  }).sort((x, y) => y.assessed_on.localeCompare(x.assessed_on) || y.created_at.localeCompare(x.created_at));
+}
+export const getAssessment = (id) => { const a = assessments.find((x) => x.id === id); return a && { ...a, entries: grades.filter((g) => g.assessment_id === id) }; };
+
+// entries: [{ studentId, score, level, comment }]. publish=false saves a draft. Only owners and admins can set `verified`.
+export async function saveAssessment({ id, subject, description, scaleId, assessedOn, publish, verified, entries: es }) {
+  const sc = getScale(scaleId);
+  if (!sc) throw new Error("Choose a scale.");
+  for (const e of es) {
+    if (sc.kind === "numeric" && !(e.score >= 0 && e.score <= Number(sc.max_score))) throw new Error(`Marks must be between 0 and ${Number(sc.max_score)}.`);
+    if (sc.kind === "levels" && !sc.levels.includes(e.level)) throw new Error("Pick a level from the scale.");
+  }
+  if (publish && !es.length) throw new Error("Add at least one grade before publishing.");
+  const old = id ? assessments.find((a) => a.id === id) : null;
+  const row = { subject, description: description || null, scale_id: scaleId, assessed_on: assessedOn,
+    status: publish ? "published" : "draft", published_on: publish ? old?.published_on || ymd(new Date()) : null };
+  if (isAdmin()) { row.verified_by = verified ? old?.verified_by || myId : null; row.verified_at = verified ? old?.verified_at || new Date().toISOString() : null; }
+  const res = id
+    ? await supabase.from("assessments").update(row).eq("id", id).select().single()
+    : await supabase.from("assessments").insert({ ...row, org_id: org.id, staff_id: myId }).select().single();
+  fail(res.error);
+  const a = res.data;
+  try {
+    const keep = new Set(es.map((e) => e.studentId));
+    const gone = grades.filter((g) => g.assessment_id === a.id && !keep.has(g.student_id)).map((g) => g.student_id);
+    if (gone.length) { const r = await supabase.from("assessment_grades").delete().eq("assessment_id", a.id).in("student_id", gone); fail(r.error); }
+    if (es.length) {
+      const r = await supabase.from("assessment_grades").upsert(es.map((e) => ({ assessment_id: a.id, student_id: e.studentId, org_id: org.id,
+        score: e.score ?? null, level: e.level ?? null, comment: e.comment || null })), { onConflict: "assessment_id,student_id" });
+      fail(r.error);
+    }
+  } catch (err) {
+    if (!id) await supabase.from("assessments").delete().eq("id", a.id); // don't leave an empty record behind
+    throw err;
+  }
+  if (old) Object.assign(old, a); else assessments.push(a);
+  grades = grades.filter((g) => g.assessment_id !== a.id).concat(es.map((e) => ({ assessment_id: a.id, student_id: e.studentId, org_id: org.id,
+    score: e.score ?? null, level: e.level ?? null, comment: e.comment || null })));
+  return a;
+}
+export async function deleteAssessment(id) {
+  const { error } = await supabase.from("assessments").delete().eq("id", id);
+  fail(error);
+  assessments = assessments.filter((a) => a.id !== id);
+  grades = grades.filter((g) => g.assessment_id !== id);
+}
+export const studentGrades = (studentId) => grades.filter((g) => g.student_id === studentId).map((g) => {
+  const a = assessments.find((x) => x.id === g.assessment_id);
+  return a && { subject: a.subject, description: a.description, date: a.assessed_on, status: a.status, text: gradeText(a.scale_id, g), comment: g.comment };
+}).filter(Boolean).sort((x, y) => y.date.localeCompare(x.date));
+
+export const listTracks = () => [...tracks].sort((a, b) => a.name.localeCompare(b.name));
+export const getTrack = (id) => tracks.find((t) => t.id === id);
+export async function saveTrack({ id, name, description, levels }) {
+  if (levels.length < 2) throw new Error("Add at least two levels, one per line, lowest first.");
+  const row = { name, description: description || null, levels };
+  if (id) {
+    const { data, error } = await supabase.from("skill_tracks").update(row).eq("id", id).select().single();
+    fail(error); Object.assign(getTrack(id), data);
+  } else {
+    const { data, error } = await supabase.from("skill_tracks").insert({ ...row, org_id: org.id }).select().single();
+    fail(error); tracks.push(data);
+  }
+}
+export async function deleteTrack(id) {
+  const { error } = await supabase.from("skill_tracks").delete().eq("id", id);
+  fail(error);
+  tracks = tracks.filter((t) => t.id !== id);
+  entries = entries.filter((e) => e.track_id !== id);
+}
+export async function recordProgress({ trackId, studentId, level, assessedOn, note }) {
+  const { data, error } = await supabase.from("skill_entries")
+    .insert({ org_id: org.id, track_id: trackId, student_id: studentId, level, assessed_on: assessedOn, note: note || null }).select().single();
+  fail(error);
+  entries.push(data);
+}
+export async function deleteEntry(id) {
+  const { error } = await supabase.from("skill_entries").delete().eq("id", id);
+  fail(error);
+  entries = entries.filter((e) => e.id !== id);
+}
+export const canUndoSkill = (en) => isAdmin() || en.recorded_by === myId;
+const latest = (list) => [...list].sort((a, b) => b.assessed_on.localeCompare(a.assessed_on) || b.created_at.localeCompare(a.created_at))[0];
+// each student's current level on one track
+export function trackStatus(trackId) {
+  const t = getTrack(trackId), byStudent = new Map();
+  for (const e of entries) if (e.track_id === trackId) byStudent.set(e.student_id, [...(byStudent.get(e.student_id) || []), e]);
+  return [...byStudent].map(([studentId, list]) => { const e = latest(list); return { studentId, level: e.level, date: e.assessed_on, index: Math.max(0, t.levels.indexOf(e.level)) }; })
+    .sort((a, b) => (getStudent(a.studentId)?.name || "").localeCompare(getStudent(b.studentId)?.name || ""));
+}
+export const studentSkills = (studentId) => tracks.map((t) => {
+  const list = entries.filter((e) => e.track_id === t.id && e.student_id === studentId);
+  if (!list.length) return null;
+  const cur = latest(list);
+  return { track: t, current: cur, count: list.length, levelIndex: Math.max(0, t.levels.indexOf(cur.level)) };
+}).filter(Boolean);
