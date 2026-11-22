@@ -24,6 +24,7 @@
   <button data-go="resources" title="Resources"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span>Files</span></button>
   <button data-go="gradebook" title="Gradebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5zM6 11.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-4.5"/></svg><span>Grades</span></button>
   <button data-go="chat" title="Chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 01-11.5 7.2L4 20.5l1.3-4.5A8 8 0 1121 12z"/></svg><span>Chat</span></button>
+      <button data-go="portal" title="Portal"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 10h12M6 14h12M6 18h7"/></svg><span>Portal</span></button>
   <button data-go="reports" title="Reports" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6"/></svg><span>Reports</span></button>
   <button data-go="profile" title="Profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span>Profile</span></button>
 </aside>
@@ -231,6 +232,89 @@
     </div>
   </section>
 
+  <section id="portalView" class="view">
+    <nav class="subnav" aria-label="Student & Parent Portal">
+      <h2>Portal</h2>
+      <button class="on" data-pt="manage">Manage accounts</button>
+      <button data-pt="messages">Messages</button>
+    </nav>
+    <div class="pane">
+      <!-- Team view: manage student accounts and parent codes -->
+      <div id="portalManage">
+        <div class="phead">
+          <div><h1>Student & Parent Portal</h1><p class="hint">Create student logins and generate parent access codes. Students see messages sent to them; parents see everything sent to their child plus parent-only messages.</p></div>
+        </div>
+        <div class="toolbar">
+          <input id="ptlSearch" type="search" placeholder="Search students" aria-label="Search students">
+          <select id="ptlFilter" class="sel" aria-label="Filter"><option value="all">All students</option><option value="has">Has portal access</option><option value="none">No portal access</option></select>
+        </div>
+        <div id="portalTable" class="tblwrap"></div>
+      </div>
+
+      <!-- Team view: send portal messages -->
+      <div id="portalMessages" hidden>
+        <div class="phead">
+          <div><h1>Portal Messages</h1><p class="hint">Send messages to students and/or parents. Messages marked "Student" are visible to the student. "Parent" messages are visible only to parents. "Both" are visible to everyone.</p></div>
+          <button class="add" id="sendPortalMsgBtn">Send message</button>
+        </div>
+        <div class="toolbar">
+          <select id="ptlMsgStudent" class="sel" aria-label="Filter by student"></select>
+          <select id="ptlMsgVisibility" class="sel" aria-label="Filter by visibility"><option value="all">All messages</option><option value="student">Student visible</option><option value="parent">Parent visible</option><option value="both">Both</option></select>
+        </div>
+        <div id="portalMsgTable" class="tblwrap"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Student portal login/view -->
+  <section id="studentPortalView" class="view" hidden>
+    <div class="authbox" id="studentLoginBox">
+      <h1>Student Portal</h1>
+      <p class="hint">Enter your email and password to view messages from your tutors.</p>
+      <label>Email <input id="stpEmail" type="email" required autocomplete="email"></label>
+      <label>Password <input id="stpPassword" type="password" required autocomplete="current-password"></label>
+      <p id="stpError" class="err" role="alert"></p>
+      <button id="stpLogin" class="add">Log in</button>
+      <p class="hint">Forgot your password? Contact your tutor.</p>
+    </div>
+    <div id="studentPortalContent" hidden>
+      <header class="portal-header">
+        <div class="portal-info">
+          <div class="bigav" id="stpAvatar"></div>
+          <div><h1 id="stpName"></h1><p class="hint" id="stpEmailDisp"></p></div>
+        </div>
+        <button id="stpLogout" class="logout">Log out</button>
+      </header>
+      <div class="pane" style="padding-top:16px">
+        <div id="stpMessages"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Parent portal login/view -->
+  <section id="parentPortalView" class="view" hidden>
+    <div class="authbox" id="parentLoginBox">
+      <h1>Parent Portal</h1>
+      <p class="hint">Enter your 5-character access code to view messages about your child.</p>
+      <label>Access code <input id="parCode" type="text" maxlength="5" required autocomplete="off" style="text-transform:uppercase; letter-spacing:0.2em;"></label>
+      <p id="parError" class="err" role="alert"></p>
+      <button id="parLogin" class="add">Log in</button>
+      <p class="hint">Lost your code? Contact your child's tutor.</p>
+    </div>
+    <div id="parentPortalContent" hidden>
+      <header class="portal-header">
+        <div class="portal-info">
+          <div class="bigav" id="parAvatar"></div>
+          <div><h1 id="parChildName"></h1><p class="hint">Parent view</p></div>
+        </div>
+        <button id="parLogout" class="logout">Log out</button>
+      </header>
+      <div class="pane" style="padding-top:16px">
+        <div id="parMessages"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="soonView" class="view"><div class="soon"><h1 id="soonTitle"></h1><p id="soonText"></p></div></section>
 </div>
 
@@ -433,6 +517,48 @@
     <label>Phone <input name="phone" type="tel" maxlength="30"></label>
     <p id="pfError" class="err" role="alert"></p>
     <div class="actions"><button type="button" id="pfCancel">Cancel</button><button type="submit" class="add">Save</button></div>
+  </form>
+</dialog>
+
+<dialog id="stAccDialog" aria-labelledby="saTitle">
+  <form id="stAccForm">
+    <h2 id="saTitle">Create student account</h2>
+    <input type="hidden" name="studentId">
+    <label>Student <span id="saStudentName"></span></label>
+    <label>Email <input name="email" type="email" required maxlength="120" autocomplete="email"></label>
+    <label>Password <input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="Create a password for the student"></label>
+    <p id="saError" class="err" role="alert"></p>
+    <div class="actions"><button type="button" id="saCancel">Cancel</button><button type="submit" class="add">Create account</button></div>
+  </form>
+</dialog>
+
+<dialog id="parCodeDialog" aria-labelledby="pcTitle">
+  <form id="parCodeForm">
+    <h2 id="pcTitle">Generate parent code</h2>
+    <input type="hidden" name="studentId">
+    <label>Student <span id="pcStudentName"></span></label>
+    <label>Parent email (optional) <input name="email" type="email" maxlength="120" placeholder="Send code to this email"></label>
+    <p id="pcError" class="err" role="alert"></p>
+    <div class="actions"><button type="button" id="pcCancel">Cancel</button><button type="submit" class="add">Generate code</button></div>
+  </form>
+</dialog>
+
+<dialog id="ptlMsgDialog" aria-labelledby="pmTitle">
+  <form id="ptlMsgForm">
+    <h2 id="pmTitle">Send portal message</h2>
+    <input type="hidden" name="studentId">
+    <label>Student <span id="pmStudentName"></span></label>
+    <label>Subject <input name="subject" required maxlength="120"></label>
+    <label>Message <textarea name="body" rows="5" required maxlength="2000" placeholder="Write your message here"></textarea></label>
+    <label>Visibility
+      <select name="visibility" required>
+        <option value="both">Both student and parent</option>
+        <option value="student">Student only (hidden from parent)</option>
+        <option value="parent">Parent only (hidden from student)</option>
+      </select>
+    </label>
+    <p id="pmError" class="err" role="alert"></p>
+    <div class="actions"><button type="button" id="pmCancel">Cancel</button><button type="submit" class="add">Send message</button></div>
   </form>
 </dialog>
 

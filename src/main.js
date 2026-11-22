@@ -1,6 +1,7 @@
 import "./style.css";
-import { ymd, parseYmd, sessionsOn, getSession, saveSession, deleteSession, markAttendance, unmarkAttendance, recentOccurrences, getTimeline, stats, monthStats, listStudents, getStudent, saveStudent, deleteStudent, getOrg, getOrgs, getMe, isAdmin, canEditSession, getMembers, getInvites, staffName, inviteMember, revokeInvite, setRole, removeMember, convertToBusiness, takesClasses, getHours, saveSettings, getLeaves, onLeave, addLeave, deleteLeave, timesheet, saveProfile, listBatches, getBatch, batchStudentIds, studentBatches, saveBatch, deleteBatch, listGuardians, getGuardian, guardianStudentIds, studentGuardians, saveGuardian, deleteGuardian, studentHistory, markAllAttendance, studentLabel, todayOccurrences, invoiceTotals, listInvoices, getInvoice, billableLines, createInvoice, addPayment, deletePayment, voidInvoice, saveBilling, money, studentInvoices, staffReport, studentReport, revenueReport, listResources, studentResources, uploadResource, updateResource, deleteResource, resourceUrls, resourceLink, RES_ACCEPT, seedScales, listScales, getScale, saveScale, deleteScale, listAssessments, getAssessment, saveAssessment, deleteAssessment, canEditAssessment, studentGrades, listTracks, getTrack, saveTrack, deleteTrack, recordProgress, deleteEntry, canUndoSkill, trackStatus, studentSkills, loadAll, clearAll, getProfile } from "./store.js";
+import { ymd, parseYmd, sessionsOn, getSession, saveSession, deleteSession, markAttendance, unmarkAttendance, recentOccurrences, getTimeline, stats, monthStats, listStudents, getStudent, saveStudent, deleteStudent, getOrg, getOrgs, getMe, isAdmin, canEditSession, getMembers, getInvites, staffName, inviteMember, revokeInvite, setRole, removeMember, convertToBusiness, takesClasses, getHours, saveSettings, getLeaves, onLeave, addLeave, deleteLeave, timesheet, saveProfile, listBatches, getBatch, batchStudentIds, studentBatches, saveBatch, deleteBatch, listGuardians, getGuardian, guardianStudentIds, studentGuardians, saveGuardian, deleteGuardian, studentHistory, markAllAttendance, studentLabel, todayOccurrences, invoiceTotals, listInvoices, getInvoice, billableLines, createInvoice, addPayment, deletePayment, voidInvoice, saveBilling, money, studentInvoices, staffReport, studentReport, revenueReport, listResources, studentResources, uploadResource, updateResource, deleteResource, resourceUrls, resourceLink, RES_ACCEPT, seedScales, listScales, getScale, saveScale, deleteScale, listAssessments, getAssessment, saveAssessment, deleteAssessment, canEditAssessment, studentGrades, listTracks, getTrack, saveTrack, deleteTrack, recordProgress, deleteEntry, canUndoSkill, trackStatus, studentSkills, loadAll, clearAll, getProfile, loadStudentPortalData, getStudentAccount, getParentCodes, listStudentAccounts, createStudentAccount, updateStudentAccount, deleteStudentAccount, generateParentCode, revokeParentCode, toggleParentCode, listPortalMessages, listPortalMessagesForStudent, listPortalMessagesForParent, sendPortalMessage, deletePortalMessage, getUnreadCounts, markPortalMessageRead, studentAccounts, parentCodes, portalMessages, portalMessageReads } from "./store.js";
 import * as auth from "./auth.js";
+import { supabase } from "./supabase.js";
 
 const $ = (id) => document.getElementById(id);
 const START_H = 0, END_H = 24, OPEN = 11, CLOSE = 19;
@@ -307,14 +308,15 @@ $("occClose").onclick = () => occDlg.close();
 occDlg.addEventListener("click", (e) => { if (e.target === occDlg) occDlg.close(); });
 
 // ---------- navigation ----------
-const SECTIONS = ["home", "cal", "people", "invoices", "resources", "gradebook", "chat", "reports", "profile"];
-const REAL = { cal: "calView", home: "homeView", people: "peopleView", profile: "profileView", invoices: "invoicesView", reports: "reportsView", resources: "resourcesView", gradebook: "gradebookView" };
-const TITLES = { home: "Home", cal: "Calendar", people: "People", invoices: "Invoices", resources: "Resources", gradebook: "Gradebook", chat: "Chat", reports: "Reports", profile: "Profile" };
+const SECTIONS = ["home", "cal", "people", "invoices", "resources", "gradebook", "chat", "reports", "profile", "portal", "studentPortal", "parentPortal"];
+const REAL = { cal: "calView", home: "homeView", people: "peopleView", profile: "profileView", invoices: "invoicesView", reports: "reportsView", resources: "resourcesView", gradebook: "gradebookView", portal: "portalView", studentPortal: "studentPortalView", parentPortal: "parentPortalView" };
+const TITLES = { home: "Home", cal: "Calendar", people: "People", invoices: "Invoices", resources: "Resources", gradebook: "Gradebook", chat: "Chat", reports: "Reports", profile: "Profile", portal: "Portal", studentPortal: "Student Portal", parentPortal: "Parent Portal" };
 const SOON = {
   chat: ["Chat", "Message students and parents."],
 };
 function show(which) {
   if ((which === "invoices" || which === "reports") && !isAdmin()) which = "home"; // money and reports are for owners and admins
+  if ((which === "portal") && !isAdmin()) which = "home"; // portal management is for owners and admins
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("on"));
   $(REAL[which] || "soonView").classList.add("on");
   if (!REAL[which]) { $("soonTitle").textContent = SOON[which][0]; $("soonText").textContent = SOON[which][1] + " Coming in a later phase."; }
@@ -327,6 +329,9 @@ function show(which) {
   if (which === "reports") renderReports();
   if (which === "resources") renderResources();
   if (which === "gradebook") renderGradebook();
+  if (which === "portal") renderPortal();
+  if (which === "studentPortal") renderStudentPortal();
+  if (which === "parentPortal") renderParentPortal();
 }
 document.querySelectorAll(".side [data-go]").forEach((b) => (b.onclick = () => { if (b.dataset.go === "profile") profileId = null; show(b.dataset.go); }));
 
@@ -1190,6 +1195,7 @@ function applyOrgUI() {
   $("orgSel").value = o.id;
   document.querySelector(".side [data-go=invoices]").hidden = !isAdmin();
   document.querySelector(".side [data-go=reports]").hidden = !isAdmin();
+  document.querySelector(".side [data-go=portal]").hidden = !isAdmin();
 }
 $("staffSel").onchange = (e) => { staffFilter = e.target.value; renderWeek(); };
 $("orgSel").onchange = async (e) => {
@@ -1343,6 +1349,386 @@ pForm.addEventListener("submit", async (e) => {
 });
 $("pfCancel").onclick = () => pDlg.close();
 pDlg.addEventListener("click", (e) => { if (e.target === pDlg) pDlg.close(); });
+
+// ---------- portal: manage student accounts & parent codes ----------
+let portalTab = "manage";
+let portalStudentFilter = "all";
+
+async function renderPortal() {
+  await loadStudentPortalData();
+  document.querySelectorAll("#portalView [data-pt]").forEach((b) => b.classList.toggle("on", b.dataset.pt === portalTab));
+  $("portalManage").hidden = portalTab !== "manage";
+  $("portalMessages").hidden = portalTab !== "messages";
+  if (portalTab === "manage") return renderPortalManage();
+  if (portalTab === "messages") return renderPortalMessages();
+}
+
+document.querySelectorAll("#portalView [data-pt]").forEach((b) => (b.onclick = () => { portalTab = b.dataset.pt; renderPortal(); }));
+
+function renderPortalManage() {
+  const q = $("ptlSearch").value.trim().toLowerCase();
+  const f = $("ptlFilter").value;
+  const all = listStudents();
+  const rows = all.filter((s) => {
+    const acc = getStudentAccount(s.id);
+    const codes = getParentCodes(s.id);
+    const hasAccess = acc || codes.length > 0;
+    if (f === "has" && !hasAccess) return false;
+    if (f === "none" && hasAccess) return false;
+    return `${s.name} ${s.email || ""} ${s.phone || ""}`.toLowerCase().includes(q);
+  });
+  $("portalTable").innerHTML = rows.length
+    ? `<table class="tbl"><thead><tr><th>Student</th><th>Student account</th><th>Parent codes</th><th>Actions</th></tr></thead><tbody>${rows.map((s) => {
+        const acc = getStudentAccount(s.id);
+        const codes = getParentCodes(s.id);
+        const codesHtml = codes.length ? codes.map((c) => `<span class="pill ${c.is_active ? "active" : "inactive"}">${esc(c.code)}${c.email ? " · " + esc(c.email) : ""}</span>`).join(" ") : '<span class="hint">None</span>';
+        return `<tr data-id="${s.id}" tabindex="0">
+          <td><span class="av">${esc(initials(s.name))}</span>${esc(s.name)}</td>
+          <td>${acc ? `<span class="pill active">${esc(acc.email)}</span>` : '<span class="hint">Not created</span>'}</td>
+          <td>${codesHtml}</td>
+          <td>
+            ${!acc ? `<button class="mark" data-stacc="${s.id}">Create login</button>` : `<button class="mark" data-stacc-edit="${acc.id}">Edit</button> <button class="undo" data-stacc-del="${acc.id}">Remove</button>`}
+            ${codes.length ? `<button class="undo" data-par-revoke-all="${s.id}">Revoke all codes</button>` : `<button class="mark" data-par-code="${s.id}">Generate code</button>`}
+          </td>
+        </tr>`;
+      }).join("")}</tbody></table>`
+    : `<p class="empty">${all.length ? "No students match your search." : "No students yet."}</p>`;
+}
+
+$("ptlSearch").oninput = renderPortalManage;
+$("ptlFilter").onchange = renderPortalManage;
+
+async function renderPortalMessages() {
+  const studentId = $("ptlMsgStudent").value || null;
+  const vis = $("ptlMsgVisibility").value;
+  let msgs = portalMessages.filter((m) => !studentId || m.student_id === studentId);
+  if (vis !== "all") msgs = msgs.filter((m) => m.visibility === vis);
+  msgs.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const students = listStudents();
+  $("ptlMsgStudent").innerHTML = '<option value="">All students</option>' + students.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  if (studentId) $("ptlMsgStudent").value = studentId;
+  $("portalMsgTable").innerHTML = msgs.length
+    ? `<table class="tbl"><thead><tr><th>Student</th><th>Subject</th><th>Visibility</th><th>Sent</th><th>By</th><th></th></tr></thead><tbody>${msgs.map((m) => {
+        const s = getStudent(m.student_id);
+        const sender = getMembers().find((x) => x.userId === m.sender_id);
+        const pill = m.visibility === "student" ? '<span class="pill inactive">Student</span>' : m.visibility === "parent" ? '<span class="pill active">Parent</span>' : '<span class="pill">Both</span>';
+        return `<tr data-id="${m.id}" tabindex="0">
+          <td>${esc(s?.name || "Unknown")}</td>
+          <td>${esc(m.subject)}</td>
+          <td>${pill}</td>
+          <td>${new Date(m.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
+          <td>${esc(sender?.name || "Unknown")}</td>
+          <td><button class="undo" data-ptlmsg-del="${m.id}">Delete</button></td>
+        </tr>`;
+      }).join("")}</tbody></table>`
+    : `<p class="empty">No messages yet. Click Send message to create one.</p>`;
+}
+
+$("ptlMsgStudent").onchange = renderPortalMessages;
+$("ptlMsgVisibility").onchange = renderPortalMessages;
+$("sendPortalMsgBtn").onclick = () => openPortalMessageDialog();
+
+function openPortalMessageDialog(studentId = null) {
+  const s = studentId ? getStudent(studentId) : null;
+  $("pmStudentName").textContent = s ? s.name : "";
+  $("pmTitle").textContent = s ? `Send message for ${s.name}` : "Send portal message";
+  $("pmError").textContent = "";
+  const form = $("ptlMsgForm");
+  form.reset();
+  form.elements.studentId.value = studentId || "";
+  if (!studentId) {
+    const students = listStudents().filter((st) => getStudentAccount(st.id) || getParentCodes(st.id).length);
+    form.elements.studentId.innerHTML = '<option value="">Select student</option>' + students.map((st) => `<option value="${st.id}">${esc(st.name)}</option>`).join("");
+  } else {
+    form.elements.studentId.innerHTML = `<option value="${s.id}">${esc(s.name)}</option>`;
+  }
+  $("ptlMsgDialog").showModal();
+  form.elements.subject.focus();
+}
+
+// Dialog handlers
+const stAccDlg = $("stAccDialog"), stAccForm = $("stAccForm");
+const parCodeDlg = $("parCodeDialog"), parCodeForm = $("parCodeForm");
+const ptlMsgDlg = $("ptlMsgDialog"), ptlMsgForm = $("ptlMsgForm");
+
+function openStudentAccountDialog(studentId) {
+  const s = getStudent(studentId);
+  const existing = getStudentAccount(studentId);
+  $("saTitle").textContent = existing ? "Edit student account" : "Create student login";
+  $("saStudentName").textContent = s.name;
+  stAccForm.reset();
+  stAccForm.elements.studentId.value = studentId;
+  if (existing) {
+    stAccForm.elements.email.value = existing.email;
+    stAccForm.elements.password.placeholder = "Leave blank to keep current password";
+    stAccForm.elements.password.required = false;
+  } else {
+    stAccForm.elements.password.required = true;
+    stAccForm.elements.password.placeholder = "Create a password for the student";
+  }
+  stAccDlg.showModal();
+  stAccForm.elements.email.focus();
+}
+
+function openParentCodeDialog(studentId) {
+  const s = getStudent(studentId);
+  $("pcStudentName").textContent = s.name;
+  parCodeForm.reset();
+  parCodeForm.elements.studentId.value = studentId;
+  parCodeDlg.showModal();
+  parCodeForm.elements.email.focus();
+}
+
+// ---------- Student Portal (public-facing) ----------
+let studentPortalStudentId = null;
+
+function renderStudentPortal() {
+  if (!studentPortalStudentId) {
+    $("studentLoginBox").hidden = false;
+    $("studentPortalContent").hidden = true;
+    $("stpError").textContent = "";
+    $("stpEmail").value = "";
+    $("stpPassword").value = "";
+    return;
+  }
+  $("studentLoginBox").hidden = true;
+  $("studentPortalContent").hidden = false;
+  renderStudentPortalMessages();
+}
+
+async function studentPortalLogin() {
+  const email = $("stpEmail").value.trim().toLowerCase();
+  const password = $("stpPassword").value;
+  if (!email || !password) { $("stpError").textContent = "Enter both email and password."; return; }
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const passwordHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  try {
+    const { data: studentId, error } = await supabase.rpc("verify_student_login", { p_email: email, p_password_hash: passwordHash });
+    if (error) throw error;
+    if (!studentId) { $("stpError").textContent = "Invalid email or password."; return; }
+    studentPortalStudentId = studentId;
+    await loadStudentPortalData();
+    renderStudentPortal();
+  } catch (err) { $("stpError").textContent = err.message; }
+}
+
+function studentPortalLogout() {
+  studentPortalStudentId = null;
+  renderStudentPortal();
+}
+
+async function renderStudentPortalMessages() {
+  if (!studentPortalStudentId) return;
+  const s = getStudent(studentPortalStudentId);
+  const msgs = listPortalMessagesForStudent(studentPortalStudentId);
+  const studentRead = new Set(portalMessageReads.filter((r) => r.student_id === studentPortalStudentId && r.reader_type === "student").map((r) => r.message_id));
+  const unreadCount = msgs.filter((m) => !studentRead.has(m.id)).length;
+  $("stpName").textContent = s.name;
+  $("stpEmailDisp").textContent = s.email || "";
+  $("stpAvatar").textContent = initials(s.name);
+  if (unreadCount) $("stpName").textContent += ` <span class="pill active">${unreadCount} unread</span>`;
+  const msgsHtml = msgs.length
+    ? msgs.map((m) => {
+        const isRead = studentRead.has(m.id);
+        return `<div class="msg ${isRead ? "read" : "unread"}" data-id="${m.id}">
+          <div class="msg-head"><b>${esc(m.subject)}</b><span class="hint">${new Date(m.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span></div>
+          <div class="msg-body">${esc(m.body).replace(/\n/g, "<br>")}</div>
+        </div>`;
+      }).join("")
+    : '<p class="empty">No messages yet.</p>';
+  $("stpMessages").innerHTML = msgsHtml;
+  // mark as read on click
+  $("stpMessages").querySelectorAll(".msg").forEach((el) => {
+    el.onclick = async () => {
+      const msgId = el.dataset.id;
+      if (!studentRead.has(msgId)) {
+        await markPortalMessageRead(msgId, studentPortalStudentId, "student");
+        studentRead.add(msgId);
+        el.classList.remove("unread");
+        el.classList.add("read");
+        renderStudentPortalMessages(); // refresh unread count
+      }
+    };
+  });
+}
+
+$("stpLogin").onclick = studentPortalLogin;
+$("stpLogout").onclick = studentPortalLogout;
+$("stpEmail").addEventListener("keydown", (e) => { if (e.key === "Enter") studentPortalLogin(); });
+$("stpPassword").addEventListener("keydown", (e) => { if (e.key === "Enter") studentPortalLogin(); });
+
+// ---------- Parent Portal (public-facing) ----------
+let parentPortalStudentId = null;
+
+function renderParentPortal() {
+  if (!parentPortalStudentId) {
+    $("parentLoginBox").hidden = false;
+    $("parentPortalContent").hidden = true;
+    $("parError").textContent = "";
+    $("parCode").value = "";
+    return;
+  }
+  $("parentLoginBox").hidden = true;
+  $("parentPortalContent").hidden = false;
+  renderParentPortalMessages();
+}
+
+async function parentPortalLogin() {
+  const code = $("parCode").value.trim().toUpperCase();
+  if (!code || code.length !== 5) { $("parError").textContent = "Enter the 5-character access code."; return; }
+  try {
+    const { data: studentId, error } = await supabase.rpc("verify_parent_code", { p_code: code });
+    if (error) throw error;
+    if (!studentId) { $("parError").textContent = "Invalid or expired access code."; return; }
+    parentPortalStudentId = studentId;
+    await loadStudentPortalData();
+    renderParentPortal();
+  } catch (err) { $("parError").textContent = err.message; }
+}
+
+function parentPortalLogout() {
+  parentPortalStudentId = null;
+  renderParentPortal();
+}
+
+async function renderParentPortalMessages() {
+  if (!parentPortalStudentId) return;
+  const s = getStudent(parentPortalStudentId);
+  const msgs = listPortalMessagesForParent(parentPortalStudentId);
+  const parentRead = new Set(portalMessageReads.filter((r) => r.student_id === parentPortalStudentId && r.reader_type === "parent").map((r) => r.message_id));
+  const unreadCount = msgs.filter((m) => !parentRead.has(m.id)).length;
+  $("parChildName").textContent = s.name;
+  $("parAvatar").textContent = initials(s.name);
+  if (unreadCount) $("parChildName").textContent += ` <span class="pill active">${unreadCount} unread</span>`;
+  const msgsHtml = msgs.length
+    ? msgs.map((m) => {
+        const isRead = parentRead.has(m.id);
+        return `<div class="msg ${isRead ? "read" : "unread"}" data-id="${m.id}">
+          <div class="msg-head"><b>${esc(m.subject)}</b><span class="hint">${new Date(m.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span></div>
+          <div class="msg-body">${esc(m.body).replace(/\n/g, "<br>")}</div>
+        </div>`;
+      }).join("")
+    : '<p class="empty">No messages yet.</p>';
+  $("parMessages").innerHTML = msgsHtml;
+  $("parMessages").querySelectorAll(".msg").forEach((el) => {
+    el.onclick = async () => {
+      const msgId = el.dataset.id;
+      if (!parentRead.has(msgId)) {
+        await markPortalMessageRead(msgId, parentPortalStudentId, "parent");
+        parentRead.add(msgId);
+        el.classList.remove("unread");
+        el.classList.add("read");
+        renderParentPortalMessages();
+      }
+    };
+  });
+}
+
+$("parLogin").onclick = parentPortalLogin;
+$("parLogout").onclick = parentPortalLogout;
+$("parCode").addEventListener("keydown", (e) => { if (e.key === "Enter") parentPortalLogin(); });
+
+// Portal table click handlers
+$("portalTable").addEventListener("click", async (e) => {
+  const t = (sel) => e.target.closest(sel);
+  try {
+    if (t("[data-stacc]")) openStudentAccountDialog(t("[data-stacc]").dataset.stacc);
+    else if (t("[data-stacc-edit]")) openStudentAccountDialog(getStudentAccountById(t("[data-stacc-edit]").dataset.staccEdit)?.student_id);
+    else if (t("[data-stacc-del]")) {
+      if (!confirm("Remove this student's portal login?")) return;
+      await deleteStudentAccount(t("[data-stacc-del]").dataset.staccDel);
+      renderPortalManage();
+    }
+    else if (t("[data-par-code]")) openParentCodeDialog(t("[data-par-code]").dataset.parCode);
+    else if (t("[data-par-revoke-all]")) {
+      if (!confirm("Revoke all parent codes for this student?")) return;
+      const codes = getParentCodes(t("[data-par-revoke-all]").dataset.parRevokeAll);
+      for (const c of codes) await revokeParentCode(c.id);
+      renderPortalManage();
+    }
+  } catch (err) { alert(err.message); }
+});
+
+$("portalMsgTable").addEventListener("click", async (e) => {
+  const t = (sel) => e.target.closest(sel);
+  if (t("[data-ptlmsg-del]")) {
+    if (!confirm("Delete this message?")) return;
+    try {
+      await deletePortalMessage(t("[data-ptlmsg-del]").dataset.ptlmsgDel);
+      renderPortalMessages();
+    } catch (err) { alert(err.message); }
+  }
+});
+
+function getStudentAccountById(id) {
+  return studentAccounts.find((a) => a.id === id);
+}
+
+stAccForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = stAccForm;
+  const studentId = form.elements.studentId.value;
+  const email = form.elements.email.value.trim().toLowerCase();
+  const password = form.elements.password.value;
+  try {
+    if (password) {
+      // hash the password (client-side SHA-256 for demo; use proper hashing in production)
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const passwordHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+      const existing = getStudentAccount(studentId);
+      if (existing) {
+        await updateStudentAccount(existing.id, { email, passwordHash });
+      } else {
+        await createStudentAccount(studentId, email, passwordHash);
+      }
+    } else {
+      const existing = getStudentAccount(studentId);
+      if (existing) await updateStudentAccount(existing.id, { email });
+    }
+    stAccDlg.close();
+    await loadStudentPortalData();
+    renderPortalManage();
+  } catch (err) { $("saError").textContent = err.message; }
+});
+$("saCancel").onclick = () => stAccDlg.close();
+stAccDlg.addEventListener("click", (e) => { if (e.target === stAccDlg) stAccDlg.close(); });
+
+parCodeForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const studentId = parCodeForm.elements.studentId.value;
+  const email = parCodeForm.elements.email.value.trim() || null;
+  try {
+    const pc = await generateParentCode(studentId, email);
+    parCodeDlg.close();
+    await loadStudentPortalData();
+    renderPortalManage();
+    alert(`Parent code generated: ${pc.code}\nShare this code with the parent.`);
+  } catch (err) { $("pcError").textContent = err.message; }
+});
+$("pcCancel").onclick = () => parCodeDlg.close();
+parCodeDlg.addEventListener("click", (e) => { if (e.target === parCodeDlg) parCodeDlg.close(); });
+
+ptlMsgForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const studentId = ptlMsgForm.elements.studentId.value;
+  const subject = ptlMsgForm.elements.subject.value.trim();
+  const body = ptlMsgForm.elements.body.value.trim();
+  const visibility = ptlMsgForm.elements.visibility.value;
+  try {
+    await sendPortalMessage({ studentId, subject, body, visibility });
+    ptlMsgDlg.close();
+    await loadStudentPortalData();
+    renderPortalMessages();
+  } catch (err) { $("pmError").textContent = err.message; }
+});
+$("pmCancel").onclick = () => ptlMsgDlg.close();
+ptlMsgDlg.addEventListener("click", (e) => { if (e.target === ptlMsgDlg) ptlMsgDlg.close(); });
 
 function renderAll() { renderWeek(); renderDash(); }
 

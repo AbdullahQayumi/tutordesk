@@ -52,7 +52,7 @@ export async function loadAll(userId, preferredOrg) {
   org = orgs.find((o) => o.id === preferredOrg) || orgs[0];
   myRole = org.role;
   const q = (t, cols = "*") => supabase.from(t).select(cols).eq("org_id", org.id);
-  const [a, b, c, d, e, f, g, bt, bl, gd, gl, ss, iv, it, pm, rs, sc, asm, ag, tk, te] = await Promise.all([
+  const [a, b, c, d, e, f, g, bt, bl, gd, gl, ss, iv, it, pm, rs, sc, asm, ag, tk, te, sa, pc, pm2, pmr] = await Promise.all([
     q("sessions"),
     q("attendance", "session_id, student_id, occurrence, marked_at").order("marked_at", { ascending: false }),
     q("students"),
@@ -74,8 +74,12 @@ export async function loadAll(userId, preferredOrg) {
     q("assessment_grades"),
     q("skill_tracks"),
     q("skill_entries"),
+    q("student_accounts"),
+    q("parent_codes"),
+    q("portal_messages"),
+    q("portal_message_reads"),
   ]);
-  for (const r of [a, b, c, d, e, f, g, bt, bl, gd, gl, ss, iv, it, pm, rs, sc, asm, ag, tk, te]) fail(r.error);
+  for (const r of [a, b, c, d, e, f, g, bt, bl, gd, gl, ss, iv, it, pm, rs, sc, asm, ag, tk, te, sa, pc, pm2, pmr]) fail(r.error);
   members = d.data.map((m) => ({ userId: m.user_id, role: m.role, email: m.profiles?.email || "", phone: m.profiles?.phone || "",
     name: m.profiles?.full_name || m.profiles?.email || "Unnamed" }));
   invites = e.data;
@@ -89,6 +93,7 @@ export async function loadAll(userId, preferredOrg) {
   attendance = b.data;
   invoices = iv.data; items = it.data; payments = pm.data; resources = rs.data;
   scales = sc.data; assessments = asm.data; grades = ag.data; tracks = tk.data; entries = te.data;
+  studentAccounts = sa.data; parentCodes = pc.data; portalMessages = pm2.data; portalMessageReads = pmr.data;
   reindexAtt();
 }
 export function clearAll() {
@@ -96,6 +101,7 @@ export function clearAll() {
   settings = {}; leaves = []; batches = []; batchLinks = []; guardians = []; guardianLinks = [];
   invoices = []; items = []; payments = []; resources = [];
   scales = []; assessments = []; grades = []; tracks = []; entries = [];
+  studentAccounts = []; parentCodes = []; portalMessages = []; portalMessageReads = [];
 }
 
 export async function getProfile(userId) {
@@ -809,3 +815,127 @@ export const studentSkills = (studentId) => tracks.map((t) => {
   const cur = latest(list);
   return { track: t, current: cur, count: list.length, levelIndex: Math.max(0, t.levels.indexOf(cur.level)) };
 }).filter(Boolean);
+
+// ---------- student & parent portal ----------
+export let studentAccounts = [];
+export let parentCodes = [];
+export let portalMessages = [];
+export let portalMessageReads = [];
+
+export async function loadStudentPortalData() {
+  const q = (t, cols = "*") => supabase.from(t).select(cols).eq("org_id", org.id);
+  const [sa, pc, pm, pmr] = await Promise.all([
+    q("student_accounts"),
+    q("parent_codes"),
+    q("portal_messages"),
+    q("portal_message_reads"),
+  ]);
+  for (const r of [sa, pc, pm, pmr]) fail(r.error);
+  studentAccounts = sa.data;
+  parentCodes = pc.data;
+  portalMessages = pm.data;
+  portalMessageReads = pmr.data;
+}
+
+export const getStudentAccount = (studentId) => studentAccounts.find((a) => a.student_id === studentId);
+export const getParentCodes = (studentId) => parentCodes.filter((c) => c.student_id === studentId && c.is_active);
+export const listStudentAccounts = () => studentAccounts;
+
+export async function createStudentAccount(studentId, email, passwordHash) {
+  const { data, error } = await supabase.from("student_accounts")
+    .insert({ org_id: org.id, student_id: studentId, email: email.toLowerCase(), password_hash: passwordHash })
+    .select().single();
+  fail(error);
+  studentAccounts.push(data);
+  return data;
+}
+
+export async function updateStudentAccount(id, { email, isActive, passwordHash }) {
+  const row = {};
+  if (email !== undefined) row.email = email.toLowerCase();
+  if (isActive !== undefined) row.is_active = isActive;
+  if (passwordHash !== undefined) row.password_hash = passwordHash;
+  if (!Object.keys(row).length) return;
+  const { data, error } = await supabase.from("student_accounts").update(row).eq("id", id).select().single();
+  fail(error);
+  Object.assign(studentAccounts.find((a) => a.id === id), data);
+}
+
+export async function deleteStudentAccount(id) {
+  const { error } = await supabase.from("student_accounts").delete().eq("id", id);
+  fail(error);
+  studentAccounts = studentAccounts.filter((a) => a.id !== id);
+}
+
+export async function generateParentCode(studentId, email = null) {
+  const { data, error } = await supabase.rpc("generate_parent_code");
+  fail(error);
+  const code = data;
+  const { data: pc, error: pcError } = await supabase.from("parent_codes")
+    .insert({ org_id: org.id, student_id: studentId, code, email })
+    .select().single();
+  fail(pcError);
+  parentCodes.push(pc);
+  return pc;
+}
+
+export async function revokeParentCode(id) {
+  const { error } = await supabase.from("parent_codes").delete().eq("id", id);
+  fail(error);
+  parentCodes = parentCodes.filter((c) => c.id !== id);
+}
+
+export async function toggleParentCode(id, isActive) {
+  const { data, error } = await supabase.from("parent_codes").update({ is_active: isActive }).eq("id", id).select().single();
+  fail(error);
+  Object.assign(parentCodes.find((c) => c.id === id), data);
+}
+
+export const listPortalMessages = (studentId) =>
+  portalMessages
+    .filter((m) => m.student_id === studentId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+export const listPortalMessagesForStudent = (studentId) =>
+  portalMessages
+    .filter((m) => m.student_id === studentId && m.visibility !== "parent")
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+export const listPortalMessagesForParent = (studentId) =>
+  portalMessages
+    .filter((m) => m.student_id === studentId && m.visibility !== "student")
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+export async function sendPortalMessage({ studentId, subject, body, visibility = "both" }) {
+  const { data, error } = await supabase.from("portal_messages")
+    .insert({ org_id: org.id, student_id: studentId, sender_id: myId, subject, body, visibility })
+    .select().single();
+  fail(error);
+  portalMessages.unshift(data);
+  return data;
+}
+
+export async function deletePortalMessage(id) {
+  const { error } = await supabase.from("portal_messages").delete().eq("id", id);
+  fail(error);
+  portalMessages = portalMessages.filter((m) => m.id !== id);
+  portalMessageReads = portalMessageReads.filter((r) => r.message_id !== id);
+}
+
+export function getUnreadCounts(studentId) {
+  const studentMsgs = portalMessages.filter((m) => m.student_id === studentId && m.visibility !== "parent");
+  const parentMsgs = portalMessages.filter((m) => m.student_id === studentId && m.visibility !== "student");
+  const studentRead = new Set(portalMessageReads.filter((r) => r.student_id === studentId && r.reader_type === "student").map((r) => r.message_id));
+  const parentRead = new Set(portalMessageReads.filter((r) => r.student_id === studentId && r.reader_type === "parent").map((r) => r.message_id));
+  return {
+    student: studentMsgs.filter((m) => !studentRead.has(m.id)).length,
+    parent: parentMsgs.filter((m) => !parentRead.has(m.id)).length,
+  };
+}
+
+export async function markPortalMessageRead(messageId, studentId, readerType) {
+  const { error } = await supabase.from("portal_message_reads")
+    .upsert({ message_id: messageId, student_id: studentId, reader_type: readerType }, { onConflict: "message_id,student_id,reader_type" });
+  fail(error);
+  portalMessageReads.push({ message_id: messageId, student_id: studentId, reader_type: readerType, read_at: new Date().toISOString() });
+}
