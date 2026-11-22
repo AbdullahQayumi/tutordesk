@@ -935,7 +935,7 @@ export function getUnreadCounts(studentId) {
 
 export async function markPortalMessageRead(messageId, studentId, readerType) {
   const { error } = await supabase.from("portal_message_reads")
-    .upsert({ message_id: messageId, student_id: studentId, reader_type: readerType }, { onConflict: "message_id,student_id,reader_type" });
+    .upsert({ org_id: org.id, message_id: messageId, student_id: studentId, reader_type: readerType }, { onConflict: "message_id,student_id,reader_type" });
   fail(error);
-  portalMessageReads.push({ message_id: messageId, student_id: studentId, reader_type: readerType, read_at: new Date().toISOString() });
+  portalMessageReads.push({ org_id: org.id, message_id: messageId, student_id: studentId, reader_type: readerType, read_at: new Date().toISOString() });
 }

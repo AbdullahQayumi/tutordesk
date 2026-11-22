@@ -38,6 +38,7 @@ create table if not exists public.portal_messages (
 );
 create table if not exists public.portal_message_reads (
   id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references public.organisations(id) on delete cascade,
   message_id uuid not null references public.portal_messages(id) on delete cascade,
   student_id uuid not null references public.students(id) on delete cascade,
   reader_type text not null check (reader_type in ('student', 'parent')),
@@ -51,6 +52,7 @@ create index if not exists student_accounts_student_idx on public.student_accoun
 create index if not exists parent_codes_org_idx on public.parent_codes (org_id);
 create index if not exists parent_codes_student_idx on public.parent_codes (student_id);
 create index if not exists portal_messages_org_idx on public.portal_messages (org_id, student_id, created_at desc);
+create index if not exists portal_message_reads_org_idx on public.portal_message_reads (org_id);
 create index if not exists portal_message_reads_student_idx on public.portal_message_reads (student_id, reader_type);
 
 -- ---------- Row Level Security ----------
@@ -87,9 +89,7 @@ create policy "reader marks read" on public.portal_message_reads for insert with
     select 1 from public.portal_messages m
     where m.id = portal_message_reads.message_id
       and m.student_id = portal_message_reads.student_id
-      and m.org_id = (
-        select org_id from public.students s where s.id = portal_message_reads.student_id
-      )
+      and m.org_id = portal_message_reads.org_id
   )
 );
 
