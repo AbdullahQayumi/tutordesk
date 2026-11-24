@@ -268,14 +268,20 @@
 
   <!-- Student portal login/view -->
   <section id="studentPortalView" class="view" hidden>
-    <div class="authbox" id="studentLoginBox">
-      <h1>Student Portal</h1>
-      <p class="hint">Enter your email and password to view messages from your tutors.</p>
-      <label>Email <input id="stpEmail" type="email" required autocomplete="email"></label>
-      <label>Password <input id="stpPassword" type="password" required autocomplete="current-password"></label>
-      <p id="stpError" class="err" role="alert"></p>
-      <button id="stpLogin" class="add">Log in</button>
-      <p class="hint">Forgot your password? Contact your tutor.</p>
+    <div class="authscreen">
+      <div class="authwrap">
+        <div class="authbrand"><span class="mark">T</span><span class="name">TutorDesk</span></div>
+        <div class="authcard" id="studentLoginBox">
+          <h1>Student Portal</h1>
+          <p class="hint">Enter your email and password to view messages from your tutors.</p>
+          <label>Email <input id="stpEmail" type="email" required autocomplete="email"></label>
+          <label>Password <input id="stpPassword" type="password" required autocomplete="current-password"></label>
+          <p id="stpError" class="err" role="alert"></p>
+          <button id="stpLogin" class="add">Log in</button>
+          <p class="hint">Forgot your password? Contact your tutor.</p>
+          <button id="stpBack" type="button" class="authback">← Back to role selection</button>
+        </div>
+      </div>
     </div>
     <div id="studentPortalContent" hidden>
       <header class="portal-header">
@@ -293,13 +299,19 @@
 
   <!-- Parent portal login/view -->
   <section id="parentPortalView" class="view" hidden>
-    <div class="authbox" id="parentLoginBox">
-      <h1>Parent Portal</h1>
-      <p class="hint">Enter your 5-character access code to view messages about your child.</p>
-      <label>Access code <input id="parCode" type="text" maxlength="5" required autocomplete="off" style="text-transform:uppercase; letter-spacing:0.2em;"></label>
-      <p id="parError" class="err" role="alert"></p>
-      <button id="parLogin" class="add">Log in</button>
-      <p class="hint">Lost your code? Contact your child's tutor.</p>
+    <div class="authscreen">
+      <div class="authwrap">
+        <div class="authbrand"><span class="mark">T</span><span class="name">TutorDesk</span></div>
+        <div class="authcard" id="parentLoginBox">
+          <h1>Parent Portal</h1>
+          <p class="hint">Enter your 5-character access code to view messages about your child.</p>
+          <label>Access code <input id="parCode" type="text" maxlength="5" required autocomplete="off" style="text-transform:uppercase; letter-spacing:0.2em;"></label>
+          <p id="parError" class="err" role="alert"></p>
+          <button id="parLogin" class="add">Log in</button>
+          <p class="hint">Lost your code? Contact your child's tutor.</p>
+          <button id="parBack" type="button" class="authback">← Back to role selection</button>
+        </div>
+      </div>
     </div>
     <div id="parentPortalContent" hidden>
       <header class="portal-header">
@@ -562,25 +574,56 @@
   </form>
 </dialog>
 
-<div id="authScreen">
-  <form id="authForm" class="authbox">
-    <h1 id="authTitle">Log in</h1>
-    <label id="authNameWrap" hidden>Your name <input id="authName" maxlength="80" autocomplete="name"></label>
-    <fieldset id="authType" class="typebox" hidden>
-      <legend>Account type</legend>
-      <label class="opt"><input type="radio" name="acct" value="solo" checked><span><b>Solo tutor</b>Just you: your calendar, students and attendance.</span></label>
-      <label class="opt"><input type="radio" name="acct" value="business"><span><b>Business</b>A team: invite staff, assign them sessions and see everyone's calendar.</span></label>
-    </fieldset>
-    <label id="authBizWrap" hidden>Business name <input id="authBiz" maxlength="80"></label>
-    <label>Email <input id="authEmail" type="email" required autocomplete="email"></label>
-    <label>Password <input id="authPassword" type="password" required minlength="8" autocomplete="current-password"></label>
-    <p id="authMsg" class="err" role="alert"></p>
-    <button id="authSubmit" type="submit" class="add">Log in</button>
-    <p class="hint"><span id="authToggleText">New here?</span> <button id="authToggle" type="button" class="linkbtn">Create an account</button></p>
-  </form>
-  <div id="authSetup" class="authbox" hidden>
-    <h1>One more setup step</h1>
-    <p class="hint">Copy <b>.env.example</b> to <b>.env</b>, paste in your Supabase URL and key, then stop and restart <b>npm run dev</b>.</p>
+<!-- Role selection screen (first screen) -->
+<div id="roleScreen" class="authscreen">
+  <div class="authwrap">
+    <div class="authbrand"><span class="mark">T</span><span class="name">TutorDesk</span></div>
+    <div class="authcard">
+      <h1>Welcome to TutorDesk</h1>
+      <p class="hint">How would you like to sign in?</p>
+      <div class="role-cards">
+    <button id="roleTutor" class="role-card" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+      <span class="role-title">Tutor</span>
+      <span class="role-desc">Manage your calendar, students, attendance, invoices and grades</span>
+    </button>
+    <button id="roleStudent" class="role-card" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="role-title">Student</span>
+      <span class="role-desc">View your messages and session history from your tutors</span>
+    </button>
+    <button id="roleParent" class="role-card" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M12 2a4 4 0 0 1 0 8H5"/></svg>
+      <span class="role-title">Parent</span>
+      <span class="role-desc">View messages and progress for your child</span>
+    </button>
+  </div>
+    </div>
+  </div>
+
+<!-- Tutor authentication screen (main app login) -->
+<div id="authScreen" hidden>
+  <div class="authwrap">
+    <div class="authbrand"><span class="mark">T</span><span class="name">TutorDesk</span></div>
+    <form id="authForm" class="authcard">
+      <h1 id="authTitle">Log in</h1>
+      <label id="authNameWrap" hidden>Your name <input id="authName" maxlength="80" autocomplete="name"></label>
+      <fieldset id="authType" class="typebox" hidden>
+        <legend class="tlbl">Account type</legend>
+        <label class="opt"><input type="radio" name="acct" value="solo" checked><span><b>Solo tutor</b>Just you: your calendar, students and attendance.</span></label>
+        <label class="opt"><input type="radio" name="acct" value="business"><span><b>Business</b>A team: invite staff, assign them sessions and see everyone's calendar.</span></label>
+      </fieldset>
+      <label id="authBizWrap" hidden>Business name <input id="authBiz" maxlength="80"></label>
+      <label>Email <input id="authEmail" type="email" required autocomplete="email"></label>
+      <label>Password <input id="authPassword" type="password" required minlength="8" autocomplete="current-password"></label>
+      <p id="authMsg" class="err" role="alert"></p>
+      <button id="authSubmit" type="submit" class="add">Log in</button>
+      <div class="foot"><span id="authToggleText">New here?</span> <button id="authToggle" type="button" class="linkbtn">Create an account</button></div>
+    </form>
+    <div id="authSetup" class="authcard" hidden>
+      <h1>One more setup step</h1>
+      <p class="hint">Copy <b>.env.example</b> to <b>.env</b>, paste in your Supabase URL and key, then stop and restart <b>npm run dev</b>.</p>
+    </div>
   </div>
 </div>
 

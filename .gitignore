@@ -2,3 +2,7 @@ node_modules
 dist
 .env
 .DS_Store
+
+# Android keystore
+android/app/key.properties
+android/app/keystore/

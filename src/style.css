@@ -93,17 +93,41 @@ dialog .actions button{border:1px solid var(--line);background:#fff;border-radiu
 dialog .actions .add{background:var(--blue);border-color:var(--blue);color:#fff}
 dialog .err{margin:0;font-size:12px;color:#c92a2a}
 
-/* ---- Step 3: login screen ---- */
+/* ---- Auth screens (login / signup / role selection) ---- */
 [hidden]{display:none!important}
 body:not(.authed) .side,body:not(.authed) .main{display:none}
-#authScreen{position:fixed;inset:0;z-index:50;background:var(--bg2);display:grid;place-items:center;padding:16px}
+.authscreen{position:fixed;inset:0;z-index:50;background:linear-gradient(160deg,#0f766e 0%,#0b5f58 55%,#0a4e47 100%);display:grid;place-items:center;padding:24px 16px;overflow:auto}
 body.authed #authScreen{display:none}
-.authbox{background:#fff;border:1px solid var(--line);border-radius:8px;padding:28px;width:min(380px,100%);display:grid;gap:12px}
-.authbox h1{font-size:18px;margin:0}
-.authbox label{display:grid;gap:4px;font-size:11px;color:var(--mute)}
-.authbox input{font:inherit;font-size:13px;color:var(--ink);padding:8px 10px;border:1px solid var(--line);border-radius:5px}
-.authbox input:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
-.authbox .add{padding:9px;font-size:13px}
+body.authed #roleScreen{display:none}
+.authwrap{width:100%;max-width:420px}
+.authbrand{display:flex;align-items:center;gap:10px;margin-bottom:22px;color:#fff}
+.authbrand .mark{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.16);display:grid;place-items:center;font-weight:700;font-size:18px;backdrop-filter:blur(4px)}
+.authbrand .name{font-size:15px;font-weight:600;letter-spacing:.2px}
+.authscreen h1{font-size:24px;margin:0 0 6px;color:#fff}
+.authhint{font-size:14px;color:rgba(255,255,255,.85);margin:0 0 22px}
+.authcard{background:#fff;border-radius:18px;padding:28px 24px;box-shadow:0 24px 60px rgba(0,0,0,.28)}
+.authcard h1{font-size:22px;margin:0 0 4px;color:#1c2430}
+.authcard .hint{margin:0 0 20px;font-size:13px;color:#6b7585}
+.authcard label{display:grid;gap:6px;font-size:12px;color:#6b7585;margin-bottom:14px;font-weight:500}
+.authcard input{font:inherit;font-size:15px;color:#1c2430;padding:12px 14px;border:1px solid #e3e6ec;border-radius:10px;background:#fff;transition:border-color .15s,box-shadow .15s}
+.authcard input:focus-visible{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(15,118,110,.15)}
+.authcard button.add{width:100%;padding:12px;border:0;border-radius:10px;background:var(--blue);color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;transition:background .15s}
+.authcard button.add:hover{background:#0d6b63}
+.authcard .foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-size:13px;color:#6b7585}
+.authcard .foot .linkbtn{color:var(--blue)}
+.authcard .err{margin:8px 0 0;font-size:13px}
+.authback{border:0;background:none;color:rgba(255,255,255,.85);font-size:13px;cursor:pointer;padding:8px 0;margin-top:18px}
+.authback:hover{color:#fff}
+
+/* Account type segmented control */
+.typebox{border:1px solid #e3e6ec;border-radius:10px;padding:8px 8px 4px;display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px}
+.tlbl{font-size:11px;font-weight:600;color:#9aa3b2;float:left;width:calc(100% - 8px);margin:0 0 6px 4px}
+.typebox .opt{display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:12px;color:#9aa3b2;padding:10px;border-radius:8px;transition:background .15s,color .15s}
+.typebox .opt input{display:none}
+.typebox .opt:has(input:checked),.typebox .opt.on{background:var(--blue-soft)}
+.typebox .opt:has(input:checked) b,.typebox .opt.on b{color:var(--blue-ink)}
+.typebox .opt b{display:block;font-size:13px;color:inherit;margin-bottom:2px}
+.typebox .opt span{display:block;font-size:11px;color:inherit;opacity:.85;line-height:1.3}
 .linkbtn{border:0;background:none;color:var(--blue);padding:0;text-decoration:underline;font:inherit}
 .logout{border:0;background:none;color:var(--mute);font-size:12px}
 .logout:hover{color:#c92a2a}
@@ -539,3 +563,16 @@ input[type=checkbox],input[type=radio]{accent-color:var(--blue)}
 .authbox label{display:grid;gap:6px;font-size:12px;color:var(--mute);margin-bottom:12px}
 .authbox input{font:inherit;font-size:13px;color:var(--ink);padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
 .authbox button.add{width:100%;margin-top:8px}
+
+/* Role selection screen */
+.role-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+.role-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px 16px;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;text-align:center;transition:transform .15s,box-shadow .15s,border-color .15s;cursor:pointer}
+.role-card:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(29,36,51,.12);border-color:var(--blue)}
+.role-card:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.role-card svg{width:40px;height:40px;stroke:var(--blue);margin-bottom:10px;flex-shrink:0}
+.role-title{font-size:16px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.role-desc{font-size:12px;color:var(--mute);line-height:1.4}
+
+@media (max-width:760px){
+  .role-cards{grid-template-columns:1fr}
+}

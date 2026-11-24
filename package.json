@@ -11,8 +11,8 @@
     "android": "npm run build:app && cap open android"
   },
   "devDependencies": {
-    "@capacitor/android": "^8.5.3",
-    "@capacitor/cli": "^8.5.3",
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
     "vite": "^5.4.11"
   },
   "dependencies": {

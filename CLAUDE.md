@@ -2,7 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Commands
+## Language Rule
+
+ALWAYS respond strictly in English. Never reply in any other language.
+
+## Current Progress — TutorDesk Mobile App
+
+**Role selection screen (done).** The mobile sign-in flow now starts at a `#roleScreen` (`index.html:568`) with three cards: **Tutor**, **Student**, and **Parent**. Each button in `src/main.js` routes to its own screen — Tutor goes to the existing `#authScreen` (login/signup, supports solo/business), Student goes to `#studentPortalView` (email + SHA-256 password via the `verify_student_login` RPC), and Parent goes to `#parentPortalView` (5-character access code via the `verify_parent_code` RPC). Back buttons on the student/parent login boxes return to the role screen, and logout resets to it. CSS rule `body.authed #roleScreen{display:none}` hides the role screen once a Tutor is authenticated.
+
+**Signed Android release build (done).** `npm run build:app` syncs the Vite bundle into `android/app/src/main/assets/public/`, then `./gradlew bundleRelease` produces a signed AAB at `android/app/build/outputs/bundle/release/app-release.aab` (3.1 MB). The keystore is `android/app/keystore/tutordesk-release.keystore` (2048-bit RSA, 10,000-day validity, CN=Abdullah Qayumi / TutorDesk, SHA384withRSA). Signing config lives in `android/app/build.gradle` and reads `key.properties`.
+
+**Next step — redesign the mobile sign-in/sign-up screen.** The Tutor auth screen (`#authScreen`) is shared between login and signup and is fairly plain. The plan is to give it a cleaner mobile-first redesign, consistent with the new role-card styling, and then rebuild and re-sign the AAB. After that: test on a physical device (none connected right now — the emulator fails with insufficient disk space), then finalize Play Store metadata (privacy policy URL, store listing text, icons, screenshots).
 
 - `npm run dev` - Start Vite local development server
 - `npm run build` - Build production web bundle into `dist/`

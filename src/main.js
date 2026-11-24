@@ -1772,6 +1772,49 @@ $("authForm").addEventListener("submit", async (e) => {
 });
 $("logoutBtn").onclick = () => auth.signOut();
 
+// Role selection screen handlers
+function showRoleScreen() {
+  $("roleScreen").hidden = false;
+  $("authScreen").hidden = true;
+  $("studentPortalView").hidden = true;
+  $("parentPortalView").hidden = true;
+  studentPortalStudentId = null;
+  parentPortalStudentId = null;
+  document.body.classList.remove("authed");
+}
+
+function showTutorAuth() {
+  $("roleScreen").hidden = true;
+  $("authScreen").hidden = false;
+  $("studentPortalView").hidden = true;
+  $("parentPortalView").hidden = true;
+  setMode("login");
+}
+
+function showStudentPortal() {
+  $("roleScreen").hidden = true;
+  $("authScreen").hidden = true;
+  $("studentPortalView").hidden = false;
+  $("parentPortalView").hidden = true;
+  renderStudentPortal();
+}
+
+function showParentPortal() {
+  $("roleScreen").hidden = true;
+  $("authScreen").hidden = true;
+  $("studentPortalView").hidden = true;
+  $("parentPortalView").hidden = false;
+  renderParentPortal();
+}
+
+$("roleTutor").onclick = showTutorAuth;
+$("roleStudent").onclick = showStudentPortal;
+$("roleParent").onclick = showParentPortal;
+
+// Back buttons from auth screens to role screen
+$("stpBack").onclick = showRoleScreen;
+$("parBack").onclick = showRoleScreen;
+
 // Runs whenever someone logs in or out
 let currentId = null;
 async function handleUser(user) {
@@ -1779,7 +1822,7 @@ async function handleUser(user) {
   if (id === currentId) return; // ignore repeat events such as token refreshes
   currentId = id;
   document.body.classList.toggle("authed", !!user);
-  if (!user) { clearAll(); profileId = null; $("authPassword").value = ""; return; }
+  if (!user) { clearAll(); profileId = null; $("authPassword").value = ""; showRoleScreen(); return; }
   try {
     const [profile] = await Promise.all([getProfile(user.id), loadAll(user.id, savedOrg())]);
     const name = profile?.full_name || user.email.split("@")[0];
@@ -1797,10 +1840,13 @@ async function handleUser(user) {
 if (!auth.configured) {
   $("authForm").hidden = true;
   $("authSetup").hidden = false;
+  showRoleScreen(); // Show role screen even if not configured
 } else {
   setMode("login");
   auth.onAuthChange(handleUser);
   auth.currentUser().then(handleUser);
+  // Start at role screen
+  showRoleScreen();
 }
 setInterval(renderWeek, 60_000); // keeps the red "now" line moving
 
