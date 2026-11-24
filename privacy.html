@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TutorDesk — Privacy Policy</title>
+  <style>
+    :root {
+      --brand: #0f766e;
+      --brand-dark: #0b5f58;
+      --ink: #1d2433;
+      --mute: #6b7280;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --line: #e5e7eb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font: 16px/1.6 "DM Sans", system-ui, -apple-system, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px 60px;
+    }
+    header { text-align: center; margin-bottom: 40px; }
+    .logo {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: 28px; font-weight: 800; color: var(--brand);
+      text-decoration: none; margin-bottom: 16px;
+    }
+    .logo svg { width: 36px; height: 36px; }
+    h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+    .meta { color: var(--mute); font-size: 14px; }
+    section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 28px; margin-bottom: 20px; }
+    h2 { font-size: 20px; font-weight: 700; margin: 0 0 12px; color: var(--ink); border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+    h3 { font-size: 16px; font-weight: 600; margin: 20px 0 8px; }
+    p { margin-bottom: 12px; }
+    ul { margin: 8px 0 12px 20px; }
+    li { margin-bottom: 6px; }
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .badge {
+      display: inline-block; font-size: 12px; font-weight: 600;
+      padding: 4px 10px; border-radius: 999px;
+      background: #dcfce7; color: #15803d;
+      margin-top: 12px;
+    }
+    footer { text-align: center; color: var(--mute); font-size: 13px; margin-top: 40px; }
+    @media (max-width: 600px) {
+      body { padding: 24px 16px 40px; }
+      h1 { font-size: 26px; }
+      section { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>
+      </svg>
+      TutorDesk
+    </a>
+    <h1>Privacy Policy</h1>
+    <p class="meta">Last updated: November 24, 2026</p>
+    <span class="badge">Effective immediately</span>
+  </header>
+
+  <section>
+    <h2>1. Introduction</h2>
+    <p>TutorDesk ("we", "our", "us") respects your privacy. This policy explains what data we collect, how we use it, and your rights. By using TutorDesk, you agree to this policy.</p>
+  </section>
+
+  <section>
+    <h2>2. Data We Collect</h2>
+    <h3>Account Information</h3>
+    <ul>
+      <li>Email address (for authentication and account recovery)</li>
+      <li>Name (displayed within your workspace)</li>
+      <li>Account type (Solo or Business)</li>
+      <li>Business name (if Business account)</li>
+    </ul>
+    <h3>Workspace Data (Provided by You)</h3>
+    <ul>
+      <li>Student and parent contact details</li>
+      <li>Session schedules, attendance records, and notes</li>
+      <li>Invoice and payment records</li>
+      <li>Gradebook entries and progress tracking data</li>
+      <li>Uploaded resources (documents, PDFs, images)</li>
+    </ul>
+    <h3>Automatic Data</h3>
+    <ul>
+      <li>Authentication logs (login timestamps, IP address for security)</li>
+      <li>Usage analytics (feature interaction, error reporting)</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. How We Use Your Data</h2>
+    <ul>
+      <li>Provide and maintain the TutorDesk service</li>
+      <li>Authenticate users and enforce workspace isolation</li>
+      <li>Enable Student and Parent portal access</li>
+      <li>Send transactional emails (invoices, portal codes, password resets)</li>
+      <li>Improve performance and fix bugs</li>
+      <li>Comply with legal obligations</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>4. Data Storage & Security</h2>
+    <ul>
+      <li><strong>Database:</strong> Supabase (PostgreSQL) — EU/US regions based on project config</li>
+      <li><strong>Encryption:</strong> All traffic encrypted via TLS 1.2+; data encrypted at rest</li>
+      <li><strong>Isolation:</strong> Row-level security enforces workspace (`org_id`) separation — no cross-workspace access</li>
+      <li><strong>Authentication:</strong> Supabase Auth (OAuth providers + email/password with secure hashing)</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>5. Data Sharing</h2>
+    <p>We do not sell, rent, or share your personal data with third parties for marketing. Data is only shared:</p>
+    <ul>
+      <li>Within your workspace (team members you invite)</li>
+      <li>With students/parents you grant portal access to</li>
+      <li>With subprocessors (Supabase for hosting/auth, email delivery services) under DPAs</li>
+      <li>When required by law or to protect rights/safety</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>6. Your Rights</h2>
+    <ul>
+      <li><strong>Access & Export:</strong> Request a copy of your data from Profile → Export Data</li>
+      <li><strong>Correction:</strong> Edit profile and workspace data anytime in-app</li>
+      <li><strong>Deletion:</strong> Delete your account in Profile → Danger Zone (removes all workspace data)</li>
+      <li><strong>Objection/Restriction:</strong> Contact us to limit processing</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>7. Data Retention</h2>
+    <ul>
+      <li>Active accounts: retained while account exists</li>
+      <li>Deleted accounts: purged within 30 days (backups up to 90 days)</li>
+      <li>Auth logs: retained 12 months for security</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>8. Children's Privacy</h2>
+    <p>TutorDesk is not directed to children under 13. Student portal accounts are created by tutors/parents. We do not knowingly collect data from children without parental consent. If you believe we have such data, contact us for immediate deletion.</p>
+  </section>
+
+  <section>
+    <h2>9. International Transfers</h2>
+    <p>Your data may be processed in countries other than your own (Supabase regions). Transfers rely on Standard Contractual Clauses or adequacy decisions.</p>
+  </section>
+
+  <section>
+    <h2>10. Changes to This Policy</h2>
+    <p>We may update this policy. Material changes will be notified in-app and via email 30 days before taking effect. Continued use constitutes acceptance.</p>
+  </section>
+
+  <section>
+    <h2>11. Contact</h2>
+    <p>Questions or requests: <a href="mailto:privacy@tutordesk.app">privacy@tutordesk.app</a></p>
+    <p>Data Protection Officer: Abdullah Qayumi</p>
+  </section>
+
+  <footer>
+    &copy; 2026 TutorDesk. All rights reserved.
+  </footer>
+</body>
+</html>
